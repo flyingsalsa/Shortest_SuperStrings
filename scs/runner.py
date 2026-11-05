@@ -540,6 +540,10 @@ def _read_jsonl(path: Path) -> list[dict]:
 def run(config_path: str, resume: bool = False, workers: Optional[int] = None,
         only_family: Optional[str] = None, force: bool = False,
         retry_errors: bool = False) -> dict:
+    # Stamp the code version BEFORE touching any output file: --force deletes
+    # (possibly git-tracked) results, which would otherwise mark a clean
+    # checkout as "-dirty".
+    code_version = git_version()
     cfg = load_config(config_path)
     if workers is not None:
         cfg["workers"] = workers
@@ -564,7 +568,6 @@ def run(config_path: str, resume: bool = False, workers: Optional[int] = None,
     if only_family:
         instances = [i for i in instances if i.family == only_family]
     t_start = _now()
-    code_version = git_version()
 
     # instances.jsonl (merge with existing records when resuming)
     recs: dict[str, dict] = {}
@@ -654,7 +657,8 @@ def run(config_path: str, resume: bool = False, workers: Optional[int] = None,
         "master_seed": cfg["master_seed"],
         "generator_version": generators.GENERATOR_VERSION,
         "runner_version": RUNNER_VERSION,
-        "sysinfo": sysinfo(), "git_commit": code_version,
+        # sysinfo() would re-read git status now, after this run wrote its outputs
+        "sysinfo": {**sysinfo(), "git_commit": code_version}, "git_commit": code_version,
         "n_instances": len(recs),
     })
     manifest.setdefault("runs", []).append({
@@ -680,6 +684,7 @@ def run_scaling(config_path: str, resume: bool = False, force: bool = False) -> 
     from .greedy import greedy
     from .exact_dp import estimate_dp_memory_bytes
 
+    code_version = git_version()     # before any output file is deleted (see run())
     cfg = json.loads(Path(config_path).read_text(encoding="utf-8"))
     name = cfg["name"]
     out_dir = Path(cfg["output_dir"])
@@ -705,7 +710,6 @@ def run_scaling(config_path: str, resume: bool = False, force: bool = False) -> 
     mem_mb = float(cfg.get("memory_mb", 4000))
     reps = int(cfg.get("reps", 5))
     g_rep = int(cfg.get("greedy_repeats", 3))
-    code_version = git_version()
     worker = get_dp_worker()
 
     with open(path, "a", encoding="utf-8") as fout:
