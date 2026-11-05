@@ -128,14 +128,14 @@
     "cpu_count_logical": 32,
     "cpu_count_physical": 16,
     "ram_bytes": 33375485952,
-    "git_commit": "c92ef5d0068a0b24c85a7121f60e6c6bbbaf1a57-dirty"
+    "git_commit": "b12b53cc854e2a7ec407e7637a33f2a953768875"
   },
-  "git_commit": "c92ef5d0068a0b24c85a7121f60e6c6bbbaf1a57-dirty",
+  "git_commit": "b12b53cc854e2a7ec407e7637a33f2a953768875",
   "n_instances": 91,
   "runs": [
     {
-      "start": "2026-11-05T17:53:37+00:00",
-      "end": "2026-11-05T17:53:38+00:00",
+      "start": "2026-11-05T18:06:59+00:00",
+      "end": "2026-11-05T18:07:00+00:00",
       "argv": [
         "C:\\Users\\Matthew\\Documents\\GitHub\\Shortest_SuperStrings\\scs\\cli.py",
         "run",
