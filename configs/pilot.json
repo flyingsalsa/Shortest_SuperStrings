@@ -1,0 +1,22 @@
+{
+  "name": "pilot",
+  "master_seed": 20261105,
+  "output_dir": "results/pilot",
+  "families": [
+    {"family": "random", "reps": 3,
+     "grid": {"alphabet": [2, 4], "n": [5, 10, 15]},
+     "fixed": {"len_dist": "uniform", "len_min": 3, "len_max": 8}},
+    {"family": "fragments", "reps": 3,
+     "grid": {"alphabet": [2, 4], "n": [5, 10, 15], "coverage": [1.0, 3.0]},
+     "fixed": {"len_dist": "uniform", "len_min": 6, "len_max": 12}},
+    {"family": "repetitive", "reps": 3,
+     "grid": {"alphabet": [4], "n": [5, 10, 15], "motif_len": [6, 12], "mutation_rate": [0.05, 0.2]},
+     "fixed": {"len_dist": "uniform", "len_min": 6, "len_max": 12, "coverage": 1.0}}
+  ],
+  "include_known": false,
+  "greedy_policies": ["lowest_id", "highest_id", "lex_merged", "random"],
+  "random_tie_runs": 10,
+  "exact": {"enabled": true, "engine": "numpy", "max_n": 16, "timeout_s": 120, "memory_mb": 4000},
+  "trace_instances": 1,
+  "workers": 1
+}

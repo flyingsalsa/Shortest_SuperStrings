@@ -1,0 +1,155 @@
+{
+ "name": "standard",
+ "master_seed": 20261105,
+ "output_dir": "results/standard",
+ "families": [
+  {
+   "family": "random",
+   "reps": 30,
+   "grid": {
+    "alphabet": [
+     2,
+     4
+    ],
+    "n": [
+     5,
+     8,
+     10,
+     12,
+     15
+    ]
+   },
+   "fixed": {
+    "len_dist": "uniform",
+    "len_min": 3,
+    "len_max": 8
+   }
+  },
+  {
+   "family": "random",
+   "reps": 30,
+   "grid": {
+    "alphabet": [
+     2,
+     4
+    ],
+    "n": [
+     5,
+     8,
+     10,
+     12,
+     15
+    ]
+   },
+   "fixed": {
+    "len_dist": "uniform",
+    "len_min": 8,
+    "len_max": 14
+   }
+  },
+  {
+   "family": "fragments",
+   "reps": 25,
+   "grid": {
+    "alphabet": [
+     2,
+     4
+    ],
+    "n": [
+     5,
+     8,
+     10,
+     12,
+     15
+    ],
+    "coverage": [
+     0.5,
+     1.0,
+     2.0
+    ]
+   },
+   "fixed": {
+    "len_dist": "uniform",
+    "len_min": 4,
+    "len_max": 8
+   }
+  },
+  {
+   "family": "fragments",
+   "reps": 25,
+   "grid": {
+    "alphabet": [
+     2,
+     4
+    ],
+    "n": [
+     5,
+     8,
+     10,
+     12,
+     15
+    ],
+    "coverage": [
+     0.5,
+     1.0,
+     2.0
+    ]
+   },
+   "fixed": {
+    "len_dist": "uniform",
+    "len_min": 8,
+    "len_max": 14
+   }
+  },
+  {
+   "family": "repetitive",
+   "reps": 25,
+   "grid": {
+    "alphabet": [
+     4
+    ],
+    "n": [
+     5,
+     8,
+     10,
+     12,
+     15
+    ],
+    "motif_len": [
+     6,
+     12,
+     24
+    ],
+    "mutation_rate": [
+     0.05,
+     0.1,
+     0.25
+    ]
+   },
+   "fixed": {
+    "len_dist": "uniform",
+    "len_min": 6,
+    "len_max": 12,
+    "coverage": 1.0
+   }
+  }
+ ],
+ "include_known": true,
+ "include_discovered": "results/discovered/discovered.jsonl",
+ "greedy_policies": [
+  "lowest_id",
+  "highest_id",
+  "lex_merged",
+  "random"
+ ],
+ "random_tie_runs": 10,
+ "exact": {
+  "enabled": true,
+  "engine": "numpy",
+  "max_n": 16,
+  "timeout_s": 120,
+  "memory_mb": 4000
+ },
+ "trace_instances": 5,
+ "workers": 1
+}

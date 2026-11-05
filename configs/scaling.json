@@ -1,0 +1,16 @@
+{
+  "name": "scaling",
+  "master_seed": 20261105,
+  "output_dir": "results/scaling",
+  "alphabet": 4,
+  "len_min": 5,
+  "len_max": 12,
+  "n_min": 4,
+  "n_max": 24,
+  "reps": 5,
+  "engines": ["numpy", "python"],
+  "python_max_n": 14,
+  "greedy_repeats": 5,
+  "timeout_s": 120,
+  "memory_mb": 4000
+}

@@ -1,0 +1,20 @@
+{
+  "name": "smoke",
+  "master_seed": 20261105,
+  "output_dir": "results/smoke",
+  "families": [
+    {"family": "random", "reps": 3,
+     "grid": {"alphabet": [2, 4], "n": [5, 8], "len_dist": ["uniform"], "len_min": [3], "len_max": [8]}},
+    {"family": "fragments", "reps": 2,
+     "grid": {"alphabet": [4], "n": [6, 9], "len_dist": ["uniform"], "len_min": [6], "len_max": [10], "coverage": [3.0]}},
+    {"family": "repetitive", "reps": 2,
+     "grid": {"alphabet": [4], "n": [6, 9], "len_dist": ["uniform"], "len_min": [6], "len_max": [10],
+              "coverage": [3.0], "motif_len": [8], "mutation_rate": [0.1]}}
+  ],
+  "include_known": true,
+  "greedy_policies": ["lowest_id", "highest_id", "lex_merged", "random"],
+  "random_tie_runs": 5,
+  "exact": {"enabled": true, "engine": "numpy", "max_n": 16, "timeout_s": 60, "memory_mb": 4000},
+  "trace_instances": 2,
+  "workers": 1
+}
