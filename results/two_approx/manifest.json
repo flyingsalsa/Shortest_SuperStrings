@@ -1,0 +1,155 @@
+{
+  "name": "two_approx",
+  "config": {
+    "name": "two_approx",
+    "master_seed": 20261106,
+    "output_dir": "results/two_approx",
+    "families": [
+      {
+        "family": "random",
+        "reps": 5,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            10,
+            15
+          ],
+          "len_dist": [
+            "uniform"
+          ],
+          "len_min": [
+            3
+          ],
+          "len_max": [
+            10
+          ]
+        }
+      },
+      {
+        "family": "fragments",
+        "reps": 5,
+        "grid": {
+          "alphabet": [
+            4
+          ],
+          "n": [
+            8,
+            15
+          ],
+          "len_dist": [
+            "uniform"
+          ],
+          "len_min": [
+            6
+          ],
+          "len_max": [
+            12
+          ],
+          "coverage": [
+            3.0
+          ]
+        }
+      },
+      {
+        "family": "repetitive",
+        "reps": 5,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            8,
+            15
+          ],
+          "len_dist": [
+            "uniform"
+          ],
+          "len_min": [
+            6
+          ],
+          "len_max": [
+            12
+          ],
+          "coverage": [
+            3.0
+          ],
+          "motif_len": [
+            3,
+            8
+          ],
+          "mutation_rate": [
+            0.05
+          ]
+        }
+      }
+    ],
+    "include_known": true,
+    "greedy_policies": [
+      "lowest_id",
+      "highest_id",
+      "lex_merged",
+      "random"
+    ],
+    "random_tie_runs": 5,
+    "exact": {
+      "enabled": true,
+      "engine": "numpy",
+      "max_n": 16,
+      "timeout_s": 120,
+      "memory_mb": 4000
+    },
+    "two_approx": {
+      "enabled": true,
+      "max_L": 2000
+    },
+    "trace_instances": 0,
+    "workers": 1
+  },
+  "config_sha256": "d5d0eef56115e214617f7542d913852caa8eb60eba4e7f8c266ee40499ff4b0d",
+  "master_seed": 20261106,
+  "generator_version": "1.0",
+  "runner_version": "1.0",
+  "sysinfo": {
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "python_version": "3.14.7",
+    "packages": {
+      "numpy": "2.5.4",
+      "matplotlib": "3.11.2",
+      "psutil": "7.2.2"
+    },
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu": "AMD Ryzen 9 9950X3D 16-Core Processor",
+    "cpu_count_logical": 32,
+    "cpu_count_physical": 16,
+    "ram_bytes": 33375485952,
+    "git_commit": "491b62f14d8f24dd914c41d9c86ea53746fa6fa4-dirty"
+  },
+  "git_commit": "491b62f14d8f24dd914c41d9c86ea53746fa6fa4-dirty",
+  "n_instances": 91,
+  "runs": [
+    {
+      "start": "2026-11-05T17:45:54+00:00",
+      "end": "2026-11-05T17:45:55+00:00",
+      "argv": [
+        "C:\\Users\\Matthew\\Documents\\GitHub\\Shortest_SuperStrings\\scs\\cli.py",
+        "run",
+        "configs/two_approx.json",
+        "--force"
+      ],
+      "resume": false,
+      "workers": 1,
+      "only_family": null,
+      "instances_processed": 91,
+      "rows_written": 910,
+      "status_counts": {
+        "ok": 910
+      }
+    }
+  ]
+}

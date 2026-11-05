@@ -1,0 +1,21 @@
+{
+  "name": "two_approx",
+  "master_seed": 20261106,
+  "output_dir": "results/two_approx",
+  "families": [
+    {"family": "random", "reps": 5,
+     "grid": {"alphabet": [2, 4], "n": [5, 10, 15], "len_dist": ["uniform"], "len_min": [3], "len_max": [10]}},
+    {"family": "fragments", "reps": 5,
+     "grid": {"alphabet": [4], "n": [8, 15], "len_dist": ["uniform"], "len_min": [6], "len_max": [12], "coverage": [3.0]}},
+    {"family": "repetitive", "reps": 5,
+     "grid": {"alphabet": [2, 4], "n": [8, 15], "len_dist": ["uniform"], "len_min": [6], "len_max": [12],
+              "coverage": [3.0], "motif_len": [3, 8], "mutation_rate": [0.05]}}
+  ],
+  "include_known": true,
+  "greedy_policies": ["lowest_id", "highest_id", "lex_merged", "random"],
+  "random_tie_runs": 5,
+  "exact": {"enabled": true, "engine": "numpy", "max_n": 16, "timeout_s": 120, "memory_mb": 4000},
+  "two_approx": {"enabled": true, "max_L": 2000},
+  "trace_instances": 0,
+  "workers": 1
+}

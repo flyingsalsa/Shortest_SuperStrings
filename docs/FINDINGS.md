@@ -2,8 +2,9 @@
 
 All numbers below come from the committed outputs:
 `results/standard/` (synthetic benchmark), `results/bio/` (phiX174 reads),
-`results/scaling/` (DP runtime) and `results/deep_dive/deep_dive.md` (targeted
-analyses and case studies). The machine was Windows 11 with an AMD CPU (32
+`results/scaling/` (DP runtime), `results/deep_dive/deep_dive.md` (targeted
+analyses and case studies), `results/shibata/` and `results/two_approx/`
+(optional extensions, sections 3b and 3c). The machine was Windows 11 with an AMD CPU (32
 logical cores, 31 GB RAM) running CPython 3.14.7 and numpy 2.5.4. All
 benchmarks ran single-process on an otherwise idle machine.
 
@@ -436,6 +437,102 @@ which are covered by tests (`tests/test_shibata.py`).
   of why the half-compression theorem and the G ≤ 2·OPT conjecture are
   different statements.
 
+## 3c. Optional extension: OpenAI's 2-approximation compared with greedy
+
+Source: OpenAI, "A Polynomial-Time 2-Approximation for Shortest Common
+Superstring", preprint dated 24 Sep 2026 (`openai/math` on GitHub; not peer
+reviewed; `docs/literature.md` source 12). The paper claims a deterministic
+polynomial-time algorithm whose output is never longer than 2·OPT. That claim
+is about its own algorithm, not greedy, so it is consistent with Shibata's
+result in section 3b.
+
+`docs/algorithms.md`, section 5, explains the algorithm. In short:
+* it computes, for every substring, a minimum number of times it must occur in
+  any superstring;
+* from these counts it builds a graph of cost W, and **[Proven, paper Lemma
+  2.1]** W ≤ OPT;
+* it connects the pieces of that graph at an extra cost of at most W;
+* it reads the output off an Euler tour, so the output length is at most
+  2W ≤ 2·OPT.
+
+Our implementation is `scs/two_approx.py`. Every step the paper proves is
+checked again while the code runs.
+
+Outputs:
+* `results/two_approx/` holds the runner output of `configs/two_approx.json`
+  (91 instances).
+* `results/two_approx/summary.md` and `standard_rescore.jsonl` come from
+  `scripts/two_approx_summary.py`. That script also runs the algorithm on all
+  4,953 instances of `results/standard` that have an exact OPT, reusing the
+  stored OPT and greedy lengths.
+
+### What we checked
+
+* **[Observed]** On all 4,953 standard instances, the 91 instances of the new
+  config, and 8 Shibata instances:
+  * no run-time check failed;
+  * every output contains every input;
+  * W ≤ OPT and the output is ≤ 2·OPT in every case.
+
+  The random tests in section 5 of `docs/verification.md` add about 100k
+  smaller inputs, also with no failure. This is evidence for the preprint on
+  small inputs, not a proof. Two of the paper's connection cases never came up
+  (`docs/verification.md`).
+
+### Results (from `results/two_approx/summary.md`)
+
+Standard instances, lengths divided by exact OPT ("worst run" is the longest
+of an instance's 13 greedy runs):
+
+| family | instances | 2-approx mean / max | W/OPT mean | greedy `lowest_id` mean | greedy worst run mean / max |
+|---|---|---|---|---|---|
+| random | 1260 | 1.281 / 1.897 | 0.991 | 1.009 | 1.022 / 1.222 |
+| fragments | 2100 | 1.259 / 1.800 | 0.983 | 1.010 | 1.022 / 1.583 |
+| repetitive | 1575 | 1.270 / 1.824 | 0.981 | 1.017 | 1.031 / 1.435 |
+| all (incl. known, discovered) | 4953 | 1.268 / 1.897 | 0.984 | 1.012 | 1.026 / 1.625 |
+
+Blum-style family `c(ab)^k, (ba)^k, (ab)^k c` (known instances):
+
+| k | OPT | W | 2-approx | greedy (every run) |
+|---|---|---|---|---|
+| 2 | 8 | 7 | 10 | 10 |
+| 4 | 12 | 11 | 14 | 18 |
+| 6 | 16 | 15 | 18 | 26 |
+
+Shibata's S_{k,t} (OPT certified, section 3b):
+
+| k | t | OPT | W | 2-approx | scripted greedy |
+|---|---|---|---|---|---|
+| 10 | 1 | 31 | 22 | 43 (1.387) | 47 (1.516) |
+| 10 | 9 | 207 | 198 | 387 (1.870) | 415 (2.005) |
+| 12 | 8 | 219 | 208 | 408 (1.863) | 441 (2.014) |
+
+### What the results show
+
+* **[Observed] On typical inputs, greedy is much better.** The 2-approximation
+  averages 1.27·OPT, against 1.01 for `lowest_id` and 1.03 for the worst
+  greedy run. On 4,868 of the 4,953 instances it is longer than every greedy
+  run. It is never shorter than the best greedy run, except on 4 Blum-style
+  instances.
+  * **[Explanation?]** The method does not adapt to the input. It adds a
+    connecting walk for every layer, even when the graph is already connected.
+    That extra cost averages 0.29·W. Its ratio falls with n, from 1.32 at n = 5
+    to 1.22 at n = 20, perhaps because pieces share more of their cost on
+    larger inputs.
+* **[Observed] Its advantage shows up only on adversarial inputs.**
+  * On the Blum-style family, greedy is forced to about 2·OPT, but the
+    2-approximation stays at OPT + 2.
+  * On S_{k,t} it beats the paper's scripted greedy run and stays under 2·OPT
+    where that run exceeds it (k = 10, t = 9: 1.870 vs 2.005). Its ratio still
+    rises toward 2 as t grows, because W = n there is well below OPT.
+  * Our ordinary tie rules do better still on S_{10,9}: `lowest_id` gives 334
+    (section 3b).
+* **[Observed] W is a strong lower bound.** W equals OPT exactly on 3,086 of
+  the 4,953 standard instances (62%), and averages 0.984·OPT; the lowest seen
+  was 0.60·OPT. W takes polynomial time to compute, so wherever a heuristic
+  finds a superstring of length W, that superstring is certified optimal with
+  no DP. On S_{k,t}, though, W = n is far below OPT = n + k − 1.
+
 ## 4. Limitations of the study
 
 * **Size and scope.** Exact OPT exists only for n ≤ 20 here (≤ 24 is feasible).
@@ -461,7 +558,17 @@ which are covered by tests (`tests/test_shibata.py`).
   the arXiv HTML; a misreading would show up as an illegal step or a length
   mismatch, and neither occurred.
 
+* **2-approximation (section 3c).** We implemented the algorithm from our
+  reading of the preprint's PDF text, and some mathematical symbols were lost
+  in text extraction. A misreading would most likely trip one of the run-time
+  checks, but a misreading that still passes them cannot be ruled out. OPT
+  comparisons cover only n ≤ 20 and the certified S_{k,t}.
+
 ## 5. Unresolved items and next steps
+
+* **W as a certificate.** Cases where the best greedy run reaches W are
+  certified optimal without a DP. That could extend exact-OPT comparisons
+  beyond n = 20 for some instances; not yet measured.
 
 * **Larger extended study.** `configs/extended.json` (n up to 20, more reps) is
   executable but was not run. Its estimated cost is 20–25 minutes.

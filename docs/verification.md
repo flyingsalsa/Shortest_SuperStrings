@@ -46,6 +46,7 @@ nothing from `overlap.py`, `preprocess.py`, `greedy.py` or `exact_dp.py`.
 | `test_greedy.py` | determinism under input permutation; random policy reproducible per seed, differs across seeds, never touches the global RNG; argument validation | 150 permutations |
 | `test_validators.py` | mutation tests: 15 corruptions (n_tied, overlap, max_overlap, merged, superstring, length, order, counters, active_before, ids, inactive pair, dropped step, wrong tied pair, wrong policy, wrong seed, missing trace) are all reported | 4 policies |
 | `test_regression.py` | ATT/TTA/TAC OPT 5; BAB/AABA/ABAA OPT 7, greedy 8 (all four policies give 8: the first maximum, overlap 3, is unique); ABC/BCDE; AAA/BBB/CCC (greedy = OPT = 9, tie counts 6 then 2); heavy preprocessing; empty / all-empty / singleton / duplicates; unequal lengths; all binary strings of length 2 and 3; unary strings; Blum-style family | hand-checked |
+| `test_two_approx.py` (added 2026-11-06) | OpenAI 2-approximation (`docs/algorithms.md` section 5): blocking functional == brute force over definition (2.1)-(2.3); the paper's `a^h` example; Lemma 2.1 (`m(s) <= N_T(s)` for a DP-optimal `T`, so `W <= OPT`); base graph balanced with cost `W`; layers reproduce the base edges, pointwise ordered, budgets sum to `W` (Lemma 3.2); Lemma 4.1 walks (cost, closure, short vertex); band join (4.2) and a hand-built two-child host (4.4); end to end: superstring of the ORIGINAL inputs, `W <= OPT`, `length <= 2 OPT`, `added_cost <= W`; one regression input per connection branch; known instances; Shibata S_{k,t}; runner rows and guards | 60 random sets of blocking cases, 80 instances for Lemma 2.1, ~450 random/periodic end-to-end instances, 3 Shibata instances |
 | `test_generators.py` | same (family, params, seed) -> identical Instance; different seeds differ; retained mode hits n exactly iff `n_target_reached`; fragments are substrings of the source at the stated positions; unreachable target flagged; `known_instances` expected values equal DP and brute force | 7 configurations x 40 seeds |
 
 ## What passing finite tests does NOT prove
@@ -64,6 +65,11 @@ nothing from `overlap.py`, `preprocess.py`, `greedy.py` or `exact_dp.py`.
   runs without `trace=True` (those are compared only through final results).
 * The runner, CLI, timeouts, memory refusal, resume logic and result-row
   schema are not covered by these tests.
+* `two_approx`: a seeded search over ~100k small inputs never reached two
+  connection branches: the link below a baseline (Sec. 5.1) and the band join
+  of upper layers (Sec. 5.2). The band join is unit-tested in isolation; the
+  first has no test. The `<= 2 OPT` guarantee is only checked where the DP
+  gives OPT (n <= 12 in tests), plus the certified OPT of S_{k,t}.
 * Random-instance sampling is biased toward small retained sets; "rich"
   instances were added to counter this, but adversarial structure (for example
   larger Blum-style gaps) is only covered by the hand-written family.

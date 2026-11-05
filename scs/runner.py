@@ -2,8 +2,9 @@
 
 Pipeline per instance: preprocess -> overlap matrix (timed separately) ->
 greedy (every policy, random policy ``random_tie_runs`` times) -> exact DP once
-(child process, timeout, memory guard) -> validation against the ORIGINAL
-inputs -> one JSON row per (instance, algorithm, policy, tie_run), appended and
+(child process, timeout, memory guard) -> optional OpenAI (2026)
+2-approximation (``"two_approx": {"enabled": true}``, in-process, L guard) ->
+validation against the ORIGINAL inputs -> one JSON row per (instance, algorithm, policy, tie_run), appended and
 flushed (checkpointing).  Traces are produced by a separate, untimed call.
 """
 from __future__ import annotations
@@ -108,6 +109,18 @@ def expand_instances(cfg: dict) -> list[Instance]:
     return out
 
 
+def two_approx_cfg(cfg: dict) -> dict:
+    """Settings for the optional OpenAI (2026) 2-approximation (``scs/two_approx.py``).
+
+    Opt-in: ``"two_approx": {"enabled": true, "max_L": 2000}``.  Read without
+    mutating ``cfg`` so existing configs keep their manifest hash.  Instances
+    whose retained total length exceeds ``max_L`` get status
+    ``skipped_n_too_large`` (the substring set is O(L^2)).
+    """
+    ta = cfg.get("two_approx") or {}
+    return {"enabled": bool(ta.get("enabled", False)), "max_L": int(ta.get("max_L", 2000))}
+
+
 def instance_record(inst: Instance) -> dict:
     d = dataclasses.asdict(inst)
     d["strings_sha256"] = sha256_strings(inst.strings)
@@ -123,6 +136,8 @@ def expected_keys(cfg: dict, instance_id: str) -> list[tuple]:
             keys.append(("greedy", pol, None))
     if cfg["exact"]["enabled"]:
         keys.append(("exact_dp", None, None))
+    if two_approx_cfg(cfg)["enabled"]:
+        keys.append(("two_approx", None, None))
     return [(instance_id,) + k for k in keys]
 
 
@@ -430,6 +445,11 @@ def process_instance(task: dict) -> dict:
                     rows.append(mk("greedy", pol, k, seed, status="error",
                                    error=f"{type(e).__name__}: {e}"))
 
+        # ---- OpenAI (2026) 2-approximation (optional, in-process) ----
+        if (inst.instance_id, "two_approx", None, None) in need:
+            rows.append(mk("two_approx", None, None, None,
+                           **_run_two_approx(inst.strings, retained, cfg, opt, total)))
+
         # ---- traces (separate, untimed) ----
         if task.get("trace"):
             _write_trace(task["out_dir"], inst, retained, M, cfg, exact_out, greedy_results)
@@ -442,6 +462,40 @@ def process_instance(task: dict) -> dict:
                 rows.append(mk(alg, pol, k, seed, status="error",
                                error=f"{type(e).__name__}: {e}"))
     return {"instance_id": inst.instance_id, "rows": rows}
+
+
+def _run_two_approx(original, retained, cfg, opt, total) -> dict:
+    """Row fields for one two_approx run.  Extra keys: ``lower_bound_W`` (the
+    paper's W <= OPT), ``added_cost`` (connection cost, <= W) and
+    ``two_approx_ops`` (connection operation -> [count, cost]).
+
+    Status ``error`` if the output is invalid, shorter than OPT, or if
+    W > OPT (would contradict the paper's Lemma 2.1); a ``TwoApproxError``
+    (one of the paper's run-time checks failing) is also recorded as error."""
+    from .two_approx import two_approx
+    ta = two_approx_cfg(cfg)
+    L = sum(map(len, retained))
+    if L > ta["max_L"]:
+        return dict(status="skipped_n_too_large", error=f"L={L} > max_L={ta['max_L']}")
+    try:
+        t0 = time.perf_counter()
+        res = two_approx(retained, check=False)
+        dt = time.perf_counter() - t0
+    except Exception as e:  # noqa: BLE001
+        return dict(status="error", error=f"{type(e).__name__}: {e}")
+    missing = check_superstring(original, res.superstring)
+    valid = (not missing) and len(res.superstring) == res.length
+    kw = dict(status="ok", length=res.length, valid=valid,
+              superstring_sha256=sha256_text(res.superstring),
+              t_solve_s=dt, t_total_s=total(dt), lower_bound_W=res.W,
+              added_cost=res.added_cost, two_approx_ops=res.operations)
+    if not valid:
+        kw.update(status="error", error=f"two_approx output invalid; missing={missing[:3]}")
+    elif opt is not None and res.length < opt:
+        kw.update(status="error", error=f"two_approx length {res.length} < exact OPT {opt}")
+    elif opt is not None and res.W > opt:
+        kw.update(status="error", error=f"lower bound W={res.W} > exact OPT {opt}")
+    return kw
 
 
 def _write_trace(out_dir, inst, retained, M, cfg, exact_out, timed_lengths) -> None:

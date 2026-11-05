@@ -121,6 +121,25 @@ estimate_dp_memory_bytes(n: int, engine: str) -> int
   process. `estimate_dp_memory_bytes` lets the runner refuse to start a run
   whose tables would exceed the memory budget.
 
+## 5b. OpenAI (2026) 2-approximation (`scs/two_approx.py`, extension)
+
+```
+two_approx(strings, check: bool = True) -> TwoApproxResult
+forced_counts(strings) -> (m: dict[str, int], W: int)     # Sec. 2 counts, W <= OPT
+base_graph(m, alphabet) -> Counter[(from_word, to_word)]  # Sec. 2.3 edge multiset
+```
+
+* Same input precondition as greedy (retained, sorted, substring-free); checked
+  when `check=True`.
+* `TwoApproxResult`: `superstring`, `length`, `W` (lower bound, `W <= OPT`),
+  `added_cost` (connection up-cost, `<= W`; `length == W + added_cost`),
+  `n_groups`, `n_layers`, `n_blocks`, `n_requests`, `n_cycles`, `operations`
+  (connection operation kind -> `[count, total cost]`).
+* Deterministic. Any failed run-time check of the paper's claims raises
+  `TwoApproxError`.
+* n = 0 -> `""`. For n = 1 the algorithm runs as usual, so the output may be
+  longer than the single string (`docs/algorithms.md` section 5.6).
+
 ## 6. Validators (`scs/validate.py`, Agent C)
 
 ```
@@ -207,6 +226,11 @@ Python `hash()`. `param_key` = JSON of the params dict with sorted keys.
 `grid` is a Cartesian product over its lists; every combination gets `reps`
 instances.
 
+Optional: `"two_approx": {"enabled": true, "max_L": 2000}` adds one
+`two_approx` row per instance. It is off when the key is absent. It runs
+in-process; instances with retained `L > max_L` get `skipped_n_too_large`.
+`configs/two_approx.json` enables it.
+
 ## 11. Result rows (`results/<name>/results.jsonl`, Agent B)
 
 One JSON object per (instance, algorithm, policy, tie_run). Required keys:
@@ -214,7 +238,7 @@ One JSON object per (instance, algorithm, policy, tie_run). Required keys:
 | key | meaning |
 |---|---|
 | `config_name`, `instance_id`, `family`, `label`, `params`, `instance_seed` | provenance |
-| `algorithm` | `"greedy"` or `"exact_dp"` |
+| `algorithm` | `"greedy"`, `"exact_dp"` or (optional) `"two_approx"` |
 | `policy` | greedy policy name, `null` for exact |
 | `tie_run`, `tie_seed` | k and seed for random policy, else `null` |
 | `status` | `"ok"`, `"timeout"`, `"memory_limit"`, `"skipped_n_too_large"`, `"error"` |
@@ -229,6 +253,7 @@ One JSON object per (instance, algorithm, policy, tie_run). Required keys:
 | `n_tie_steps`, `max_tied`, `sum_overlap` | greedy only (null for exact) |
 | `t_preprocess_s`, `t_overlap_s`, `t_solve_s`, `t_total_s` | `time.perf_counter` seconds; solve excludes preprocess+overlap; total = all three, measured in the process doing the work |
 | `code_version`, `timestamp` | git commit hash (+`-dirty`), ISO time |
+| `lower_bound_W`, `added_cost`, `two_approx_ops` | `two_approx` rows only: the paper's `W <= OPT`, connection cost (`length = W + added_cost`), operation kind -> `[count, cost]`. The row is `error` if `W > OPT` or `length < OPT` |
 
 `instances.jsonl` holds each `Instance` (as dict) plus `strings_sha256`.
 `manifest.json` holds config, seeds, generator version, python/package
@@ -248,6 +273,7 @@ Timing: benchmarks run with `workers = 1` on an otherwise idle machine.
 | Path | Owner |
 |---|---|
 | `scs/schema.py`, `scs/seeds.py`, `scs/__init__.py`, `pyproject.toml`, `requirements.txt`, `README.md`, `docs/INTERFACES.md`, `docs/FINDINGS.md`, `docs/AI_ASSISTANCE.md`, `docs/WALKTHROUGH.md` | coordinator |
+| `scs/shibata.py`, `scs/two_approx.py`, `tests/test_two_approx.py`, `configs/two_approx.json` | coordinator (optional extensions) |
 | `scs/preprocess.py`, `scs/overlap.py`, `scs/greedy.py`, `scs/exact_dp.py`, `docs/algorithms.md` | Agent A |
 | `scs/generators.py`, `scs/runner.py`, `scs/cli.py`, `scs/sysinfo.py`, `configs/`, `scs/bio/`, `scripts/` | Agent B |
 | `scs/validate.py`, `scs/oracle.py`, `tests/`, `docs/verification.md` | Agent C |

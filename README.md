@@ -41,6 +41,7 @@ bash scripts/reproduce_bio.sh
 | `scs/generators.py` | input families: random, fragments, repetitive, known, discovered |
 | `scs/runner.py`, `scs/cli.py` | experiment runner (child-process DP with timeout/memory guard, checkpoint/resume) |
 | `scs/shibata.py`, `scripts/shibata_experiment.py` | Shibata S_{k,t} reproduction: legality replay and OPT certificate |
+| `scs/two_approx.py` | OpenAI (2026) preprint's 2-approximation (forced counts, hierarchical graph, Euler tour) with run-time checks of the paper's lemmas; optional runner algorithm `two_approx` |
 | `scs/bio/` | bounded download + extraction of the phiX174 sequencing data |
 | `configs/` | `smoke`, `pilot`, `standard`, `extended`, `scaling`, `bio*` configurations |
 | `analysis/analyze.py` | metrics, tables, figures |
@@ -67,5 +68,7 @@ python -m scs.cli run configs/standard.json --resume  # resumable main run
 python -m scs.cli scaling configs/scaling.json --force
 python analysis/analyze.py results/standard --scaling results/scaling
 python scripts/shibata_experiment.py                  # Shibata construction (about 1 min)
+python -m scs.cli run configs/two_approx.json --force # greedy vs OPT vs the 2-approximation (~5 s)
+python scripts/two_approx_summary.py                  # results/two_approx/summary.md (~15 s; needs results/standard)
 python -m scs.cli run configs/extended.json --force   # optional, larger
 ```

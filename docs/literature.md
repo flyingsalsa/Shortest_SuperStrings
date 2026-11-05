@@ -35,6 +35,7 @@ automated access (HTTP 403/429 or bot-protection page); those items are marked.
 | 9 | N. Chukhin, A. S. Kulikov, I. Mihajlin, A. Smal, "The Greedy Superstring Algorithm Achieves Ratio 2 for Strings of Length 6 Already" | arXiv:2608.20018 v2 (v1 20 Aug 2026, v2 24 Aug 2026) preprint | arXiv abs + HTML fetched | Thm 3.1: for every fixed length k >= 6 the greedy ratio rho_k >= 2 (suprema over alphabets and tie-breaking). Thm 4.1/5.1: rho_3 = 9/5 exactly. Disproves the Cazaux-Rivals conjecture rho_k = 2 - 1/k. Says the general conjecture (ratio 2) is still open (v2, before source 11). Construction: nine length-6 strings, OPT = 9t+5, greedy can reach 18t, with t blocks using fresh symbols. Ties are arbitrary (bound holds for a suitable tie-breaking). Authors "independently verified"; AI assistance disclosed (GPT-5.6 Sol Pro/Ultra). Hand proofs; no peer review known. |
 | 10 | N. Chukhin, A. S. Kulikov, I. Mihajlin, A. Smal, "A Tight Cycle-Cover Inequality for Shortest Common Superstring" | arXiv:2609.27921 v2 (v1 listed 21 Aug 2026, v2 24 Sep 2026; the id prefix suggests Sept 2026 - minor inconsistency on the abs page) preprint | arXiv abs + HTML fetched | Improves SCS approximation to 7/3 and proves greedy <= 3 OPT (via (2+gamma) with gamma = 1, shown best possible for that inequality). Input substring-free; tie-breaking not addressed in the text. AI assistance disclosed. Preprint. |
 | 11 | H. Shibata, "Disproving the Greedy Superstring Conjecture" | arXiv:2609.01365 v1, 1 Sep 2026, cs.DS, CC BY 4.0, no journal-ref (preprint, not peer reviewed per a tracker page) | arXiv abs + HTML fetched | Cor. 15: greedy ratio >= 9/4 for general SCS. Thm 14: for even k >= 10 inputs all of length k, rho_k >= (9k+2)/(4k+4). Construction S_{k,t} over alphabet {x,y,a,b_1..b_t}; OPT = t(4s+2)+k-1 (k = 2s), some greedy output has length t(9s+1)+1. Substring-free inputs; **ties arbitrary: the bad output is one valid tie-breaking choice** ("we may select any such pair"). Proofs by hand, no computer verification described, no explicit small instance in the text. **Project check (coordinator, 2026-11-05):** construction re-implemented from the arXiv HTML; scripted greedy run machine-checked legal and OPT certified for 15 (k,t) pairs, G/OPT up to 2.109 (see docs/FINDINGS.md section 3b). Discloses that OpenAI's "GPT-5.6 Sol" in a custom harness found the counterexample/strategies; author states he verified everything. |
+| 12 | OpenAI, "A Polynomial-Time 2-Approximation for Shortest Common Superstring" | Preprint dated 24 Sep 2026, published as a PDF in the `openai/math` GitHub repository (`preprints/A-Polynomial-Time-2-Approximation-for-Shortest-Common-Superstring-September-24-2026/paper.pdf`); no arXiv id or peer review found | GitHub URL above | **Full text read** (added 2026-11-06; PDF fetched from raw.githubusercontent.com and text-extracted; some math symbols were lost in extraction and were reconstructed from context). Thm 1.1: a deterministic polynomial-time algorithm outputs a superstring of length `<= 2 OPT` for every input. This is about the paper's own algorithm, explicitly NOT greedy. Cites sources 10 and 11. Method: forced occurrence counts give `W <= OPT`; a balanced hierarchical substring graph of cost `W`; periodic layers; connection at extra cost `<= W`; Euler tour. Single corporate author, no AI-assistance statement beyond the author line. **Project check (2026-11-06):** re-implemented in `scs/two_approx.py` with every intermediate claim asserted at run time (`docs/algorithms.md` section 5). No check failed on ~100k random/periodic instances; `W <= OPT` and output `<= 2 OPT` held whenever OPT was computed exactly. |
 
 ## 2. Results, assumptions, and project dependencies
 
@@ -141,12 +142,16 @@ automated access (HTTP 403/429 or bot-protection page); those items are marked.
   The 3.425 bound is Englert-Matsakis-Vesely. Kalugin-Nikolaev (SOSA 2024) is a
   short simplified proof of the 1/2 *compression* bound. (This corrects the lead
   in the task brief.)
-* The "OpenAI manuscript": the only matching item found is Shibata's paper (11),
-  which discloses that an OpenAI model ("GPT-5.6 Sol") found the counterexample;
-  the Chukhin et al. papers also disclose use of GPT-5.6 Sol models. We found no
-  standalone OpenAI-authored manuscript. The Kingy AI tracker page for Shibata's
-  result does not itself name OpenAI. Unresolved whether any separate OpenAI
-  document exists.
+* The "OpenAI manuscript": as of 2026-11-05 the only matching item we had found
+  was Shibata's paper (11), which discloses that an OpenAI model ("GPT-5.6 Sol")
+  found the counterexample. The Chukhin et al. papers also disclose use of
+  GPT-5.6 Sol models. **Update 2026-11-06:** a standalone OpenAI-authored
+  preprint does exist (source 12). It is about the *approximability of SCS*,
+  not about greedy: it claims a polynomial-time 2-approximation (improving the
+  7/3 of source 10), while agreeing that greedy itself can exceed 2 (it cites
+  Shibata). So "greedy <= 2 OPT is false" (11) and "SCS is 2-approximable in
+  polynomial time" (12) are compatible claims about different algorithms.
+  Both are unrefereed preprints.
 
 ## 3. Unresolved claims (final list)
 
@@ -162,6 +167,9 @@ automated access (HTTP 403/429 or bot-protection page); those items are marked.
 7. Correctness and peer-review status of Shibata (9/4), Chukhin et al. (ratio 2 for
    k = 6; greedy <= 3; 7/3 approximation): preprints only. The date mismatch on
    the arXiv page of 2609.27921 (v1 listed in Aug 2026) is unexplained.
-8. Existence of an "OpenAI manuscript" distinct from AI-assisted arXiv papers.
+8. ~~Existence of an "OpenAI manuscript" distinct from AI-assisted arXiv papers.~~
+   Resolved 2026-11-06: source 12. Still open: its correctness and peer-review
+   status. Our implementation checks its lemmas computationally on small
+   instances only; that is evidence, not a proof.
 9. Compression bound for **every** tie-breaking rule (assumed in the project,
    tested empirically, not verified from the original proofs).

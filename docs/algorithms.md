@@ -1,4 +1,4 @@
-# Algorithms: preprocessing, overlaps, greedy, exact DP
+# Algorithms: preprocessing, overlaps, greedy, exact DP, 2-approximation
 
 Notation as in `docs/INTERFACES.md`: `n` retained strings, `ell` maximum
 length, `L` total retained length, `ov(x, y)` the longest suffix of `x` that is
@@ -227,7 +227,155 @@ Time `O(|x| + |y|)`. `overlap_naive` tries all `k` by slicing in `O(min^2)`.
 against it: `O(n^2 * ell)` total (`O(n * ell)` for the prefix functions plus
 `O(n^2 * ell)` for the scans), `O(n^2)` memory.
 
-## 5. Summary
+## 5. OpenAI (2026) 2-approximation (`scs/two_approx.py`)
+
+Source: OpenAI, "A Polynomial-Time 2-Approximation for Shortest Common
+Superstring", preprint dated 24 Sep 2026 (`github.com/openai/math`,
+`preprints/`). Not peer reviewed (see `docs/literature.md`, source 12). It
+claims a deterministic polynomial-time algorithm whose output length is
+`<= 2 OPT` on every input. The guarantee is for this algorithm, **not** for
+greedy. Section numbers below are the paper's.
+
+Unlike greedy and the DP, it does not use the permutation formulation. A
+superstring is a closed walk in a graph whose vertices are substrings, and
+the algorithm builds that walk in two halves, each costing at most `W <= OPT`.
+
+### 5.1 The hierarchical graph
+
+`V` is the set of all distinct substrings of the retained strings, including
+the empty word `ε` (`|V| = O(L^2)`). Each nonempty `s` has an **up edge**
+`pref(s) -> s` (append the last letter of `s`, cost 1) and a **down edge**
+`s -> suf(s)` (delete the first letter, cost 0). Take a balanced edge multiset
+(in-degree = out-degree at every vertex) whose support is connected, contains
+`ε` and contains every input string. An Euler tour from `ε` writes down the
+letter of each up step. At every point the current vertex is a suffix of the
+text written so far, so the result is a superstring. Its length is the number
+of up edges.
+
+Example: the walk `ε -> a -> ab -> b -> bc -> c -> ε` writes `abc` and visits
+`ab` and `bc`.
+
+### 5.2 Forced occurrence counts and the lower bound W (Sec. 2)
+
+For every nonempty `s ∈ V`, in decreasing order of length, `m(s)` is the
+smallest integer satisfying all of these:
+
+* `m(s) >= Σ_c m(cs)` and `m(s) >= Σ_c m(sc)`. Occurrences of `cs` for
+  different letters `c` are disjoint occurrences of `s`.
+* `m(s) >= 1` if `s` is an input.
+* **The periodicity rule (2.6).** Let `v ∈ V` have a period `p` (not
+  necessarily the least one), let `A` be its two-sided periodic extension, and
+  let `w` be the prefix with `|v| = |w| + kp`. If `m(v) > B_A(v; m)`, then
+  `m(w) >= B_A(w; m) + k + 1`.
+
+Here `B_A(s; m)` counts occurrences of `s` that are **blocked** relative to
+`A`. A blocked occurrence is surrounded by a substring
+`r = c1 · A[-α, |s|+β) · c2` with `c1 != A(-α-1)` and `c2 != A(|s|+β)`: a
+stretch agreeing with `A`, bracketed by one mismatching letter on each side.
+Each such placement adds `m(r)` (2.3). The intuition: if some occurrence of
+`v` is unblocked, it contains `k+1` unblocked occurrences of `w` at offsets
+`0, p, ..., kp`. The rule records these repeated occurrences, which the
+extension inequalities alone miss. For example, the single input `a^h` gets
+`m(a^j) = h - j + 1`.
+
+**Lemma 2.1:** `m(s) <= N_T(s)` (the number of occurrences of `s` in `T`) for
+every superstring `T`. With `T` optimal, `W = Σ_c m(c) <= OPT`.
+
+The implementation (`forced_counts`) enumerates periods with KMP borders and
+evaluates `B_A` by growing the middle stretch `A[-α, |s|+β)` while it stays in
+`V`.
+
+### 5.3 The base graph (Sec. 2.3)
+
+The up edge into `s` gets multiplicity `u(s) = m(s) - Σ_c m(cs)`. The down edge
+out of `s` gets `d(s) = m(s) - Σ_c m(sc)`. Both are nonnegative by the first
+rule. Telescoping shows the graph is balanced and has exactly `W` up edges.
+Every input is maximal in `V`, so it has `u = d = m >= 1` and lies on the
+graph. If this graph happened to be connected and to contain `ε`, its Euler
+tour would already give length `W <= OPT`. In general it is disconnected.
+
+### 5.4 Layers (Sec. 3)
+
+Decompose the base graph into closed walks. Read the letters appended on a
+walk's up steps cyclically. That word, repeated both ways, is the walk's
+**periodic text**, and every vertex the walk visits is a window `[x, e)` of it.
+Walks are grouped by primitive text up to rotation. Each group is stored by
+its least rotation `R` (period `p = |R|`).
+
+Within a group, the walks' passages are re-sorted (Lemma 3.2) into **layers**:
+one-turn walks of period `p`. Each layer is described by one nondecreasing
+function `z`: at start `x` it visits the windows `[x, e)` with
+`z(x-1) <= e <= z(x)`, and `z(x+p) = z(x) + p`. The layers of a group are
+pointwise ordered, low to high, and together they use exactly the base edges.
+Each layer of period `p` costs `p` and receives an extra **budget** `p`. The
+budgets add up to `W`, so the whole connection phase must cost at most `W`.
+
+### 5.5 Connecting (Sec. 4–6)
+
+Every connection is a closed walk that follows an ordered list of windows
+(starts and ends nondecreasing) in one periodic text (Lemma 4.1). Its cost is
+the total increase of the ends. Closed walks keep the graph balanced, so the
+only goal is connectivity to `ε`. Groups are processed in increasing period.
+For each group:
+
+1. **Incoming requests (4.4).** Earlier, smaller-period groups may have sent
+   *requests* to a layer of this group. Each host serves all its requests with
+   one excursion paid by its own budget plus the requesters' reserved budgets.
+   The highest host becomes a **baseline**. Every remaining layer below it is
+   attached for its own budget `p`.
+2. **Easy cases (5.2).** At the distinguished position `t` (start of the
+   lexicographically greatest rotation), let `H` be the top layer's first end.
+   If `H - t <= n p` (n = number of upper layers), a round trip `ε -> [t,H) -> ε`
+   touches them all. Otherwise, if the baseline reaches within `n p` of `H`,
+   a band join (4.2) attaches them all to it.
+3. **Forced record (5.3).** Otherwise choose the smallest `k` for which at most
+   `k` layers reach height `H - kp` at `t`. The count rule forces at least
+   `k+1` unblocked occurrences of `w = A[t, H - kp)`, and at most `k` of them
+   can lie on this text in this alignment. So some layer `D` has a window `R`
+   containing `w` on a different aligned text. This window is the **record**.
+   Lemma 3.4 (a Fine–Wilf-type bound) gives `|R| < p + q`.
+4. **Distributing budgets (5.4).** The top `k` layers either form one
+   **collective block** with a planned link to `D` (4.3, cost `kp`). Otherwise
+   each upper layer is handled on its own: a round trip if it has a vertex of
+   length `<= p`, an **individual block** with a planned cost-`p` link to `D`,
+   or a request to `D`. Requests only go to strictly larger periods, so they
+   are served later.
+
+Every block has exactly one planned target. Following the targets, a
+component either reaches a rooted layer or contains one directed cycle
+(Sec. 6). On each cycle, the algorithm keeps the link of the block whose text
+has the greatest distinguished rotation. Lemma 3.5 then gives a contact vertex
+of length `<= q`, where `q` is the target's period. The target's own outgoing
+link is dropped, and the target joins its layers internally for `(k-1)q`
+(Lemma 6.1). That frees one period `q`, which pays for a round trip from the
+contact to `ε`. The result is connected, balanced, contains `ε`, and has at
+most `2W` up edges.
+
+### 5.6 Implementation notes and checks
+
+* Every finite choice is broken deterministically: sorted words, smallest
+  index, first admissible window. The output is a function of the retained set.
+* Every hypothesis the paper derives is asserted at run time. Failures raise
+  `TwoApproxError`, never a silent fallback. Checked: the inequalities
+  (3.1), (4.1), (4.2), (4.5), (5.2), (5.4), (5.9), (5.11), Proposition 5.2,
+  and the contact lengths of Lemmas 4.4/6.2. Also: each added walk is a legal,
+  closed walk in `V` within its budget, total added cost `<= W`, the final
+  graph is connected (Euler tour uses every edge), and `|output| = W + added`.
+  With `check=True` (the default), it also verifies that the layers reproduce
+  the base edge multiset and that the output contains every input.
+* For `n = 1` the algorithm is run as usual instead of returning the string.
+  Its output can be longer than the input (`abaab -> 9` letters). This is the
+  one exception to the `n = 1` convention in `docs/INTERFACES.md`.
+* The construction is not adaptive. It adds connection walks even when the
+  base graph is already connected (`a^16` gives 31 letters, greedy gives 16).
+  So its typical ratio is far worse than greedy's, even though its worst case
+  is proved better.
+* Cost: `|V| <= L · ell` substrings, `O(|V| · ell log ell)` periodicity rules, each blocking
+  functional `O(ell^2 σ^2)` dictionary look-ups. All later steps are
+  polynomial in `W <= L`. In practice it takes a few ms per instance with
+  `L <= 250` (standard config).
+
+## 6. Summary
 
 | Step | Time | Memory |
 |---|---|---|
@@ -235,3 +383,4 @@ against it: `O(n^2 * ell)` total (`O(n * ell)` for the prefix functions plus
 | overlap matrix | O(n^2 ell) | O(n^2) |
 | greedy | O(n^3 + nL) | O(n^2 + L) |
 | exact DP | O(n^2 2^n) | O(n 2^n) |
+| two_approx (Sec. 5) | polynomial; dominated by the counts: O(\|V\| ell log ell) rules x O(ell^2 σ^2) look-ups, \|V\| <= L ell | O(\|V\| ell) |
