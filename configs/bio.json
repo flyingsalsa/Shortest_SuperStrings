@@ -1,0 +1,13 @@
+{
+ "name": "bio",
+ "master_seed": 20261105,
+ "output_dir": "results/bio",
+ "families": [],
+ "include_known": false,
+ "include_instances": "data/bio/bio_instances.jsonl",
+ "greedy_policies": ["lowest_id", "highest_id", "lex_merged", "random"],
+ "random_tie_runs": 10,
+ "exact": {"enabled": true, "engine": "numpy", "max_n": 20, "timeout_s": 120, "memory_mb": 4000},
+ "trace_instances": 5,
+ "workers": 1
+}

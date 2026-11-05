@@ -6,10 +6,10 @@
   "len_min": 5,
   "len_max": 12,
   "n_min": 4,
-  "n_max": 24,
+  "n_max": 26,
   "reps": 5,
   "engines": ["numpy", "python"],
-  "python_max_n": 14,
+  "python_max_n": 20,
   "greedy_repeats": 5,
   "timeout_s": 120,
   "memory_mb": 4000

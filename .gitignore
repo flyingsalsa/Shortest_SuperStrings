@@ -179,3 +179,10 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# raw downloaded sequencing data (re-fetch with python -m scs.bio.fetch)
+data/raw/*/
+
+# large raw result files are committed gzipped (*.jsonl.gz); decompress with: gzip -dk <file>.gz
+results/standard/results.jsonl
+results/standard/instances.jsonl
+results/bio/results.jsonl

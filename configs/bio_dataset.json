@@ -1,0 +1,20 @@
+{
+ "dataset": "PhiX174 Illumina GA IIx single-end run ERR098007 (ENA study PRJEB2910)",
+ "verified_on": "2026-11-05 via ENA portal API filereport and NCBI esummary",
+ "files": [
+  {
+   "role": "reads",
+   "accession": "ERR098007",
+   "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR098/ERR098007/ERR098007.fastq.gz",
+   "dest": "data/raw/ERR098007/ERR098007.fastq.gz",
+   "bytes": 1836971,
+   "md5": "6929c1176a8ca06fe303f4d1c9fbb16e"
+  },
+  {
+   "role": "reference",
+   "accession": "NC_001422.1",
+   "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=NC_001422.1&rettype=fasta&retmode=text",
+   "dest": "data/raw/NC_001422.1/NC_001422.1.fasta"
+  }
+ ]
+}

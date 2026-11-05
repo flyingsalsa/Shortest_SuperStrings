@@ -1,0 +1,72 @@
+{
+ "config": {
+  "accession": "ERR098007",
+  "reference_accession": "NC_001422.1",
+  "reads": "data/raw/ERR098007/ERR098007.fastq.gz",
+  "reference": "data/raw/NC_001422.1/NC_001422.1.fasta",
+  "read_length": 76,
+  "master_seed": 20261105,
+  "conditions": [
+   "bio_unconditioned",
+   "bio_local"
+  ],
+  "n_values": [
+   5,
+   8,
+   10,
+   12,
+   15,
+   18
+  ],
+  "reps": 30,
+  "window": 250,
+  "min_pool": 40,
+  "max_draws_factor": 50,
+  "out_dir": "data/bio"
+ },
+ "raw_files": {
+  "data/raw/ERR098007/ERR098007.fastq.gz": "636e948fb6680148e4fb030257e74c8421687d4effbd49d207570e893dbae01e",
+  "data/raw/NC_001422.1/NC_001422.1.fasta": "caa155c83967cc080f4f188f14f1f28c18d77448e87c3d00d3579ed348f4de2a"
+ },
+ "reference_length": 5386,
+ "n_reads_total": 23332,
+ "read_length_histogram": {
+  "18": 1,
+  "30": 3,
+  "32": 4,
+  "33": 33,
+  "35": 1,
+  "39": 1,
+  "51": 1,
+  "53": 1,
+  "57": 1,
+  "58": 1,
+  "59": 1,
+  "62": 1,
+  "63": 1,
+  "65": 1,
+  "68": 2,
+  "70": 2,
+  "71": 8,
+  "72": 117,
+  "76": 23152
+ },
+ "excluded": {
+  "wrong_length": 180,
+  "ambiguous_base": 34
+ },
+ "n_eligible": 23118,
+ "eligible_strand_counts": {
+  "unplaced": 11446,
+  "+": 9710,
+  "-": 1962
+ },
+ "quality_filtering": "none",
+ "trimming": "none",
+ "orientation": "as supplied (fixed orientation); reverse complements NOT added",
+ "paired_end": "not applicable (single-end run)",
+ "placement": "exact match in circularised RefSeq sequence; no mismatches/indels",
+ "n_instances": 360,
+ "n_target_missed": 0,
+ "instances_sha256": "8cc8087f9d3b09d86ffdd1088c8173d5ca8c704b504c881b07acdb2a4dfb89b1"
+}

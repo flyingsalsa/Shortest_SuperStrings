@@ -1,0 +1,20 @@
+[
+ {
+  "url": "https://ftp.sra.ebi.ac.uk/vol1/fastq/ERR098/ERR098007/ERR098007.fastq.gz",
+  "path": "data/raw/ERR098007/ERR098007.fastq.gz",
+  "status": "downloaded",
+  "bytes": 1836971,
+  "md5": "6929c1176a8ca06fe303f4d1c9fbb16e",
+  "sha256": "636e948fb6680148e4fb030257e74c8421687d4effbd49d207570e893dbae01e",
+  "role": "reads"
+ },
+ {
+  "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=NC_001422.1&rettype=fasta&retmode=text",
+  "path": "data/raw/NC_001422.1/NC_001422.1.fasta",
+  "status": "downloaded",
+  "bytes": 5520,
+  "md5": "e4122b3ae9f0a68b2051050c78b735b4",
+  "sha256": "caa155c83967cc080f4f188f14f1f28c18d77448e87c3d00d3579ed348f4de2a",
+  "role": "reference"
+ }
+]

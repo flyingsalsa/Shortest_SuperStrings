@@ -1,0 +1,29 @@
+{
+  "search_space": {
+    "mode": "random",
+    "n_min": 3,
+    "n_max": 6,
+    "alphabet": 2,
+    "len_min": 2,
+    "len_max": 6
+  },
+  "seed": 20261105,
+  "samples_requested": 300000,
+  "max_instances": 2000000,
+  "top_k_per_policy": 10,
+  "instances_examined": 300000,
+  "candidates_rejected": 2016559,
+  "n_saved": 7,
+  "policies": [
+    "lowest_id",
+    "highest_id",
+    "lex_merged"
+  ],
+  "best_ratio": {
+    "lowest_id": 1.5714285714285714,
+    "highest_id": 1.5714285714285714,
+    "lex_merged": 1.5714285714285714
+  },
+  "seconds": 23.30294704437256,
+  "code_version": "7b725d30ecac7db7e5fa8418c0ee980db8deba45-dirty"
+}

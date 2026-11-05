@@ -1,0 +1,234 @@
+{
+  "name": "standard",
+  "config": {
+    "name": "standard",
+    "master_seed": 20261105,
+    "output_dir": "results/standard",
+    "families": [
+      {
+        "family": "random",
+        "reps": 30,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            8,
+            10,
+            12,
+            15,
+            18,
+            20
+          ]
+        },
+        "fixed": {
+          "len_dist": "uniform",
+          "len_min": 3,
+          "len_max": 8
+        }
+      },
+      {
+        "family": "random",
+        "reps": 30,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            8,
+            10,
+            12,
+            15,
+            18,
+            20
+          ]
+        },
+        "fixed": {
+          "len_dist": "uniform",
+          "len_min": 8,
+          "len_max": 14
+        }
+      },
+      {
+        "family": "random",
+        "reps": 30,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            8,
+            10,
+            12,
+            15,
+            18,
+            20
+          ]
+        },
+        "fixed": {
+          "len_dist": "fixed",
+          "len_min": 7,
+          "len_max": 7
+        }
+      },
+      {
+        "family": "fragments",
+        "reps": 25,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            8,
+            10,
+            12,
+            15,
+            18,
+            20
+          ],
+          "coverage": [
+            0.5,
+            1.0,
+            2.0
+          ]
+        },
+        "fixed": {
+          "len_dist": "uniform",
+          "len_min": 4,
+          "len_max": 8
+        }
+      },
+      {
+        "family": "fragments",
+        "reps": 25,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            8,
+            10,
+            12,
+            15,
+            18,
+            20
+          ],
+          "coverage": [
+            0.5,
+            1.0,
+            2.0
+          ]
+        },
+        "fixed": {
+          "len_dist": "uniform",
+          "len_min": 8,
+          "len_max": 14
+        }
+      },
+      {
+        "family": "repetitive",
+        "reps": 25,
+        "grid": {
+          "alphabet": [
+            4
+          ],
+          "n": [
+            5,
+            8,
+            10,
+            12,
+            15,
+            18,
+            20
+          ],
+          "motif_len": [
+            6,
+            12,
+            24
+          ],
+          "mutation_rate": [
+            0.05,
+            0.1,
+            0.25
+          ]
+        },
+        "fixed": {
+          "len_dist": "uniform",
+          "len_min": 6,
+          "len_max": 12,
+          "coverage": 1.0
+        }
+      }
+    ],
+    "include_known": true,
+    "include_discovered": "results/discovered/discovered.jsonl",
+    "greedy_policies": [
+      "lowest_id",
+      "highest_id",
+      "lex_merged",
+      "random"
+    ],
+    "random_tie_runs": 10,
+    "exact": {
+      "enabled": true,
+      "engine": "numpy",
+      "max_n": 20,
+      "timeout_s": 120,
+      "memory_mb": 4000
+    },
+    "trace_instances": 5,
+    "workers": 1
+  },
+  "config_sha256": "92acefbb25280dd8540eb287bb554fcf0aa71eedd1e729024dc4e3504f0bbc74",
+  "master_seed": 20261105,
+  "generator_version": "1.0",
+  "runner_version": "1.0",
+  "sysinfo": {
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "python_version": "3.14.7",
+    "packages": {
+      "numpy": "2.5.4",
+      "matplotlib": "3.11.2",
+      "psutil": "7.2.2"
+    },
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu": "AMD Ryzen 9 9950X3D 16-Core Processor",
+    "cpu_count_logical": 32,
+    "cpu_count_physical": 16,
+    "ram_bytes": 33375485952,
+    "git_commit": "7b725d30ecac7db7e5fa8418c0ee980db8deba45-dirty"
+  },
+  "git_commit": "7b725d30ecac7db7e5fa8418c0ee980db8deba45-dirty",
+  "n_instances": 4953,
+  "runs": [
+    {
+      "start": "2026-11-05T15:25:27+00:00",
+      "end": "2026-11-05T15:36:15+00:00",
+      "argv": [
+        "C:\\Users\\Matthew\\Documents\\GitHub\\Shortest_SuperStrings\\.claude\\worktrees\\shortest-superstring-greedy-78b551\\scs\\cli.py",
+        "run",
+        "configs/standard.json",
+        "--force"
+      ],
+      "resume": false,
+      "workers": 1,
+      "only_family": null,
+      "instances_processed": 4953,
+      "rows_written": 69342,
+      "status_counts": {
+        "ok": 69342
+      }
+    }
+  ]
+}

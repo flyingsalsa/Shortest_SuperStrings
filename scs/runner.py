@@ -94,8 +94,10 @@ def expand_instances(cfg: dict) -> list[Instance]:
                 out.append(inst)
     if cfg.get("include_known", True):
         out.extend(generators.known_instances())
-    disc = cfg.get("include_discovered")
-    if disc:
+    for key in ("include_discovered", "include_instances"):
+        disc = cfg.get(key)
+        if not disc:
+            continue
         for line in Path(disc).read_text(encoding="utf-8").splitlines():
             if line.strip():
                 out.append(Instance(**json.loads(line)))

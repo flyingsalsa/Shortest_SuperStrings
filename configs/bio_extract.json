@@ -1,0 +1,15 @@
+{
+ "accession": "ERR098007",
+ "reference_accession": "NC_001422.1",
+ "reads": "data/raw/ERR098007/ERR098007.fastq.gz",
+ "reference": "data/raw/NC_001422.1/NC_001422.1.fasta",
+ "read_length": 76,
+ "master_seed": 20261105,
+ "conditions": ["bio_unconditioned", "bio_local"],
+ "n_values": [5, 8, 10, 12, 15, 18],
+ "reps": 30,
+ "window": 250,
+ "min_pool": 40,
+ "max_draws_factor": 50,
+ "out_dir": "data/bio"
+}

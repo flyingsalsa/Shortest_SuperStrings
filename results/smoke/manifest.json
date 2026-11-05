@@ -1,0 +1,148 @@
+{
+  "name": "smoke",
+  "config": {
+    "name": "smoke",
+    "master_seed": 20261105,
+    "output_dir": "results/smoke",
+    "families": [
+      {
+        "family": "random",
+        "reps": 3,
+        "grid": {
+          "alphabet": [
+            2,
+            4
+          ],
+          "n": [
+            5,
+            8
+          ],
+          "len_dist": [
+            "uniform"
+          ],
+          "len_min": [
+            3
+          ],
+          "len_max": [
+            8
+          ]
+        }
+      },
+      {
+        "family": "fragments",
+        "reps": 2,
+        "grid": {
+          "alphabet": [
+            4
+          ],
+          "n": [
+            6,
+            9
+          ],
+          "len_dist": [
+            "uniform"
+          ],
+          "len_min": [
+            6
+          ],
+          "len_max": [
+            10
+          ],
+          "coverage": [
+            3.0
+          ]
+        }
+      },
+      {
+        "family": "repetitive",
+        "reps": 2,
+        "grid": {
+          "alphabet": [
+            4
+          ],
+          "n": [
+            6,
+            9
+          ],
+          "len_dist": [
+            "uniform"
+          ],
+          "len_min": [
+            6
+          ],
+          "len_max": [
+            10
+          ],
+          "coverage": [
+            3.0
+          ],
+          "motif_len": [
+            8
+          ],
+          "mutation_rate": [
+            0.1
+          ]
+        }
+      }
+    ],
+    "include_known": true,
+    "greedy_policies": [
+      "lowest_id",
+      "highest_id",
+      "lex_merged",
+      "random"
+    ],
+    "random_tie_runs": 5,
+    "exact": {
+      "enabled": true,
+      "engine": "numpy",
+      "max_n": 16,
+      "timeout_s": 60,
+      "memory_mb": 4000
+    },
+    "trace_instances": 2,
+    "workers": 1
+  },
+  "config_sha256": "acec4a1403136718f66a3d3ce70a8d1f82f07dc983cd10389d5870c6f0d5d135",
+  "master_seed": 20261105,
+  "generator_version": "1.0",
+  "runner_version": "1.0",
+  "sysinfo": {
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "python_version": "3.14.7",
+    "packages": {
+      "numpy": "2.5.4",
+      "matplotlib": "3.11.2",
+      "psutil": "7.2.2"
+    },
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu": "AMD Ryzen 9 9950X3D 16-Core Processor",
+    "cpu_count_logical": 32,
+    "cpu_count_physical": 16,
+    "ram_bytes": 33375485952,
+    "git_commit": "7b725d30ecac7db7e5fa8418c0ee980db8deba45-dirty"
+  },
+  "git_commit": "7b725d30ecac7db7e5fa8418c0ee980db8deba45-dirty",
+  "n_instances": 31,
+  "runs": [
+    {
+      "start": "2026-11-05T15:25:25+00:00",
+      "end": "2026-11-05T15:25:26+00:00",
+      "argv": [
+        "C:\\Users\\Matthew\\Documents\\GitHub\\Shortest_SuperStrings\\.claude\\worktrees\\shortest-superstring-greedy-78b551\\scs\\cli.py",
+        "run",
+        "configs/smoke.json",
+        "--force"
+      ],
+      "resume": false,
+      "workers": 1,
+      "only_family": null,
+      "instances_processed": 31,
+      "rows_written": 279,
+      "status_counts": {
+        "ok": 279
+      }
+    }
+  ]
+}

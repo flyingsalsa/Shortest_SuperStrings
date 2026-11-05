@@ -1,0 +1,3 @@
+family,N,removed_frac_mean,removed_frac_median,duplicate_frac_mean,contained_frac_mean,empty_frac_mean,L_reduction_mean
+bio_local,180,0.054046976898919734,0.0,0.054046976898919734,0.0,0.0,0.054046976898919734
+bio_unconditioned,180,0.0009320175438596491,0.0,0.0009320175438596491,0.0,0.0,0.0009320175438596497
