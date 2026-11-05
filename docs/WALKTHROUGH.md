@@ -95,11 +95,22 @@ full write-up is `docs/FINDINGS.md`.
 This is not genome assembly: the model does not handle sequencing errors,
 reverse complements or repeats.
 
+**Shibata's counterexample (optional extension):**
+* We rebuilt the 2026 construction and checked every merge for legality.
+* We certified OPT with a counting bound plus an explicit superstring of the
+  same length.
+* A legal greedy run exceeds 2·OPT from n = 198 strings onward, reaching
+  2.109 at n = 672.
+* Our ordinary tie rules stay below 1.9 on the same inputs. This is the
+  worst-case-tie phenomenon again.
+
 ## 4. Likely questions and honest answers
 
 * **"Does this prove greedy is a 2-approximation?"** No. Experiments cannot
-  prove a bound. A 2026 preprint claims the 2-approximation conjecture is false
-  when ties are broken adversarially; it is not peer reviewed yet.
+  prove an upper bound. In fact, the 2026 Shibata preprint claims the
+  conjecture is false under adversarial tie-breaking, and our reproduction
+  confirms G/OPT > 2 on explicit instances, with OPT certified. The paper's
+  general proof is still not peer reviewed.
 * **"Why trust the DP?"** It matches three independent oracles on hundreds of
   tiny instances. Every output is also checked to contain every input.
 * **"Why does preprocessing matter?"** If one string contains another, the

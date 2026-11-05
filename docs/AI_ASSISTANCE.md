@@ -16,6 +16,9 @@ one long prompt, and later asked for a pull request.
   ran all the main experiments.
 * Found and verified the sequencing dataset with `curl` against the ENA and
   NCBI APIs.
+* Implemented the Shibata reproduction: `scs/shibata.py`,
+  `scripts/shibata_experiment.py` and `tests/test_shibata.py`. The construction
+  was read from the arXiv HTML of 2609.01365v1.
 * Wrote `scs/bio/`, `analysis/deep_dive.py`, `docs/dataset_manifest.md`,
   `docs/FINDINGS.md`, `docs/WALKTHROUGH.md`, the README and this log.
 

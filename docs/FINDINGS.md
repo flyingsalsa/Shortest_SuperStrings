@@ -119,7 +119,8 @@ Results for `lowest_id` (`results/standard/analysis/summary_by_family_n.md`,
 * **[Proven, literature]** The worst case is far worse than anything we observed.
   Blum-style inputs push greedy towards ratio 2. Recent preprints claim worse
   examples with suitable tie-breaking: ≥ 2 for every fixed string length k ≥ 6
-  (Chukhin et al.) and ≥ 9/4 overall (Shibata). Those preprints are not peer
+  (Chukhin et al.) and ≥ 9/4 overall (Shibata; our machine-checked
+  reproduction in section 3b reaches G/OPT = 2.109). Those preprints are not peer
   reviewed; see `docs/literature.md`.
 * Our random samples **do not** approach those bounds. Bad cases need
   structure, so these results say nothing about worst-case behaviour.
@@ -355,6 +356,86 @@ supplied strings, not genome assembly.
   it can include regions no sampled read covers, and reads with errors are not
   substrings of it. The DP certifies OPT only for the exact strings supplied.
 
+## 3b. Optional extension: reproducing Shibata's construction
+
+Source: H. Shibata, arXiv:2609.01365v1 (1 Sep 2026). This is a preprint and
+has not been peer reviewed. We read the construction from the arXiv HTML
+(Sections 3.1 and 5) and implemented it in `scs/shibata.py`. The experiment is
+`scripts/shibata_experiment.py`; its outputs are `results/shibata/shibata.md`,
+`shibata.jsonl`, and `trace_k10_t1.json`, which is a full step-by-step trace for
+k = 10, t = 1.
+
+### The instance
+
+* **Strings.** S_{k,t} contains every length-k cyclic substring of 3t periodic
+  base strings U_i, V_i, W_i, over the alphabet {x, y, a, b_1..b_t}. In total
+  that is n = t(2k+2) distinct strings, each of length k.
+* **The "bad" run.** First, the cyclic substrings of each base string are merged
+  around the cycle; each of these merges uses overlap k − 1. The paper chooses a
+  specific starting point for each cycle. Then come
+  * V̂_i ⊙ Û_i, with overlap s − 3, where s = k/2;
+  * M_1 ⊙ … ⊙ M_t, with overlap 1;
+  * the Ŵ_i blocks appended with overlap 0.
+
+### What we checked
+
+None of these checks relies on the paper's proofs.
+
+1. **Legality.** We replayed the paper's scripted merge sequence. At every step
+   we used a naive routine to recompute the overlaps of all ordered pairs of
+   current strings, and checked that the chosen pair attains the current
+   maximum. **[Observed]** All steps are legal greedy choices for all 15
+   (k, t) combinations we tried, k ∈ {10, 12, 16, 20} and t up to 16. The first
+   step faces many tied pairs.
+2. **The output.** It contains every input, and its length equals the paper's
+   formula t(9s+1)+1.
+3. **OPT certificate.**
+   * Lower bound: n distinct strings of length k need at least n distinct
+     length-k windows, so OPT ≥ n + k − 1.
+   * Upper bound: we built an explicit superstring of exactly that length from
+     an Eulerian circuit of the order-(k−1) de Bruijn graph, and checked that
+     it contains every input.
+   * **[Proven]** for each instance by this pair of bounds, which match the
+     paper's OPT = t(4s+2)+k−1.
+   * For k = 10, t = 1 (n = 22) the exact subset DP independently gives
+     OPT = 31.
+
+### Results (excerpt from `results/shibata/shibata.md`)
+
+| k | t | n | OPT | Scripted greedy G | G/OPT | Compression (L−G)/(L−OPT) |
+|---|---|---|---|---|---|---|
+| 10 | 1 | 22 | 31 | 47 | 1.516 | 0.915 |
+| 10 | 8 | 176 | 185 | 369 | 1.995 | 0.883 |
+| 10 | 9 | 198 | 207 | 415 | **2.005** | 0.883 |
+| 10 | 16 | 352 | 361 | 737 | 2.042 | 0.881 |
+| 20 | 16 | 672 | 691 | 1457 | **2.109** | 0.940 |
+
+**[Observed]** On these explicit instances, a legal maximum-overlap greedy run
+exceeds G = 2·OPT. The first such case among our grid is k = 10, t = 9, at
+n = 198. The paper's limit (9k+2)/(4k+4) is approached as t grows.
+
+This is a finite, machine-checked confirmation of the paper's construction for
+these parameters. **[Proven]** for these specific inputs: G/OPT > 2 for some
+legal greedy run, so the conjecture "every greedy run is within 2·OPT" fails on
+them. That conclusion is only as strong as our checker and certificate code,
+which are covered by tests (`tests/test_shibata.py`).
+
+### What else the reproduction shows
+
+* **Tie-breaking.** Our own tie rules do much better on the same inputs. For
+  k = 10, t = 9:
+  * `lowest_id` gives 334, `highest_id` 378 and `lex_merged` 387, i.e. G/OPT
+    1.61–1.87;
+  * 50 random-tie runs give 245–322.
+  * At t = 1, some random seeds even reach OPT.
+
+  The 9/4 lower bound is a statement about the worst legal tie-breaking, not
+  about typical greedy runs. This matches what we saw in RQ3.
+* **Compression vs length ratio.** Even at G/OPT > 2, the compression ratio
+  stays around 0.88–0.94, far above the proven 1/2. This is a concrete example
+  of why the half-compression theorem and the G ≤ 2·OPT conjecture are
+  different statements.
+
 ## 4. Limitations of the study
 
 * **Size and scope.** Exact OPT exists only for n ≤ 20 here (≤ 24 is feasible).
@@ -374,16 +455,14 @@ supplied strings, not genome assembly.
 * **Literature.** For several older sources and all 2026 preprints, only the
   abstract or bibliographic record was checked. Unresolved items are listed in
   `docs/literature.md`, section 3.
-* **Optional extension not done.** Shibata's construction was not reproduced
-  (see section 5).
+* **Shibata reproduction.** It checks the paper's construction only for the
+  listed (k, t). It does not check the general proofs, the 9/4 limit itself,
+  or peer-review status. We implemented the construction from our reading of
+  the arXiv HTML; a misreading would show up as an illegal step or a length
+  mismatch, and neither occurred.
 
 ## 5. Unresolved items and next steps
 
-* **Reproducing Shibata's construction.** The smallest instance is reported as
-  n ≥ 22. Our numpy DP solved random n = 24 instances in about 15 s with 2.4 GB,
-  so certifying OPT for a small instance of the construction may be feasible.
-  This needs the exact parameterised construction and its legal tie choices from
-  arXiv:2609.01365, and we have not implemented them.
 * **Larger extended study.** `configs/extended.json` (n up to 20, more reps) is
   executable but was not run. Its estimated cost is 20–25 minutes.
 * The unresolved literature claims in `docs/literature.md`, section 3.

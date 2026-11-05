@@ -12,3 +12,4 @@ PY="${1:-.venv/Scripts/python}"
 "$PY" -m scs.cli scaling configs/scaling.json --force
 "$PY" analysis/analyze.py results/standard --scaling results/scaling
 gzip -kf -9 results/standard/results.jsonl results/standard/instances.jsonl
+"$PY" scripts/shibata_experiment.py

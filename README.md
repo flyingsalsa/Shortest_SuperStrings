@@ -40,6 +40,7 @@ bash scripts/reproduce_bio.sh
 | `scs/validate.py`, `scs/oracle.py` | independent validators, trace replay, brute-force oracles |
 | `scs/generators.py` | input families: random, fragments, repetitive, known, discovered |
 | `scs/runner.py`, `scs/cli.py` | experiment runner (child-process DP with timeout/memory guard, checkpoint/resume) |
+| `scs/shibata.py`, `scripts/shibata_experiment.py` | Shibata S_{k,t} reproduction: legality replay and OPT certificate |
 | `scs/bio/` | bounded download + extraction of the phiX174 sequencing data |
 | `configs/` | `smoke`, `pilot`, `standard`, `extended`, `scaling`, `bio*` configurations |
 | `analysis/analyze.py` | metrics, tables, figures |
@@ -65,5 +66,6 @@ python -m scs.cli run configs/smoke.json --force      # tiny end-to-end run
 python -m scs.cli run configs/standard.json --resume  # resumable main run
 python -m scs.cli scaling configs/scaling.json --force
 python analysis/analyze.py results/standard --scaling results/scaling
+python scripts/shibata_experiment.py                  # Shibata construction (about 1 min)
 python -m scs.cli run configs/extended.json --force   # optional, larger
 ```
