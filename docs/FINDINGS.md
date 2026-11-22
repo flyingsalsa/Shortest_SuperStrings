@@ -3,8 +3,8 @@
 All numbers below come from the committed outputs:
 `results/standard/` (synthetic benchmark), `results/bio/` (phiX174 reads),
 `results/scaling/` (DP runtime), `results/deep_dive/deep_dive.md` (targeted
-analyses and case studies), `results/shibata/` and `results/two_approx/`
-(optional extensions, sections 3b and 3c). The machine was Windows 11 with an AMD CPU (32
+analyses and case studies), `results/shibata/`, `results/two_approx/` and
+`results/twelve_fifths/` (optional extensions, sections 3b–3d). The machine was Windows 11 with an AMD CPU (32
 logical cores, 31 GB RAM) running CPython 3.14.7 and numpy 2.5.4. All
 benchmarks ran single-process on an otherwise idle machine.
 
@@ -64,8 +64,8 @@ Family D is reported separately and never pooled with the benchmark families.
 
 The main runs started only after the following passed. Details are in
 `docs/verification.md`.
-* All 100 pytest tests passed. (The suite has since grown to 139 tests with the
-  Shibata and 2-approximation extensions; all of them pass.)
+* All 100 pytest tests passed. (The suite has since grown to 144 tests with the
+  Shibata, 2-approximation and 12/5-construction extensions; all of them pass.)
 * The DP agreed with an independent permutation brute force on 900 instances.
 * On 60 instances, the DP also agreed with direct enumeration of all candidate
   strings and with a separate BFS oracle.
@@ -623,6 +623,90 @@ Shibata's S_{k,t} (OPT certified, section 3b):
   finds a superstring of length W, that superstring is certified optimal with
   no DP. On S_{k,t}, though, W = n is far below OPT = n + k − 1.
 
+## 3d. The report's adapted 12/5 construction (Section 4.4)
+
+Source: our own report, `Super_Strings.tex` Section 4.4 and Appendix A. It is
+a one-parameter simplification of a five-string construction that the report
+attributes to Chukhin et al. [GSC26].
+
+We have **not** independently verified that source; see section 5. The
+checks below test the report's own definitions:
+* implementation: `scs/twelve_fifths.py`;
+* experiment: `scripts/twelve_fifths_experiment.py`;
+* outputs: `results/twelve_fifths/`;
+* tests: `tests/test_twelve_fifths.py`.
+
+### The instance
+
+* **Strings.** For each n ≥ 2 there are 5(n−1) binary "gap words", written
+  [L | g₁,…,g_k | R] (L zeros, then 1s separated by the given gaps, then R
+  zeros). The parameters are N = n², M = N + 4n and private gaps
+  pᵢ = N + i, for i = 2..n.
+* **Superstring.** Hₙ is a short superstring: each group's five strings are
+  windows of the gap pattern (M, M, pᵢ, M, pᵢ, M, M).
+* **The bad run.** A prescribed greedy run forms, in order:
+  * Aᵢ = Xᵢ ⊕ Yᵢ and Bᵢ = Uᵢ ⊕ Vᵢ, each with overlap αᵢ;
+  * Cᵢ = Bᵢ ⊕ Zᵢ, with overlap βᵢ;
+  * Tᵢ = Aᵢ ⊕ Cᵢ, with overlap γ.
+
+  It then concatenates the Tᵢ with overlap 0.
+
+### What we checked
+
+None of these checks relies on the report's appendix arguments.
+
+1. **For every n = 2..100:**
+   * Sₙ is substring-free.
+   * Hₙ contains every input and has length 5n³ + 12n² − 2n − 1.
+   * Performing the scripted merges with their actual overlaps uses exactly
+     αᵢ = 5N+8n+i+1, βᵢ = 4N+8n+i+1, γ = 2N+2n+1 and 0.
+   * The output has length Gₙ = 12n³ + (31n² − 43n − 12)/2.
+
+   **[Observed]** All of these hold.
+2. **Legality, for n = 2..20 (up to 95 strings).** We replayed the run while
+   recomputing the overlap of every ordered pair of current strings at every
+   step: with a naive routine for n ≤ 6, and with the KMP routine (tested
+   against the naive one) above that. **[Observed]** Every prescribed pair
+   attains the current maximum. Ties are common: up to 362 pairs tie at one
+   step.
+3. **Exact OPT for n = 2..6, by subset DP.** n = 6 is 25 strings and took
+   34 s with about 5.6 GB. **[Observed]** OPT = |Hₙ| in every case, so Hₙ is
+   optimal there.
+
+### Results (excerpt from `results/twelve_fifths/twelve_fifths.md`)
+
+| n | strings | OPT | Scripted greedy Gₙ | G/OPT, or G/\|Hₙ\| where OPT is unknown | `lowest_id` | `highest_id` | `lex_merged` |
+|---|---|---|---|---|---|---|---|
+| 2 | 5 | 83 | 109 | 1.313 | 83 | 83 | 83 |
+| 3 | 10 | 236 | 393 | 1.665 | 236 | 289 | 236 |
+| 5 | 20 | 914 | 1774 | 1.941 | 914 | 1268 | 914 |
+| 6 | 25 | **1499** (exact DP) | 3015 | **2.011** | — | — | — |
+| 17 | 80 | ≤ 27,998 | 63,064 | ≥ 2.252 (> 9/4) | — | — | — |
+| 100 | 495 | ≤ 5,119,799 | 12,152,844 | ≥ 2.374 | — | — | — |
+
+Interpretation:
+* For n ≥ 7, Gₙ/|Hₙ| is a **lower bound** on G/OPT, because |Hₙ| ≥ OPT.
+* It tends to 12/5. It exceeds Shibata's 9/4 from n = 17 onwards.
+
+**[Proven] for n = 6, by exact computation.** With 25 binary strings, a legal
+greedy run has G/OPT = 3015/1499 = 2.011 > 2. That refutes "every greedy run is
+within 2·OPT" on this specific input. It is a much smaller counterexample than
+the first ratio-above-2 instance we found with Shibata's construction
+(n = 198, section 3b). It rests on our legality checker and DP, which are both
+tested.
+
+### Tie-breaking and figure
+
+* **[Observed] Ordinary tie rules avoid the trap here.** `lowest_id` and
+  `lex_merged` find the optimum for every n ≤ 5. `highest_id` is worse, up to
+  G/OPT = 1.39 at n = 5. None of 50 random-tie runs reproduced the scripted
+  output for n = 3, 4 or 5. As with Shibata's construction, the bad ratio
+  comes from one specific legal choice among many ties.
+* **Figure.** `results/figures/fig_twelve_fifths_n3` draws n = 3 (10 strings).
+  Each string is shown as a line with ticks at its 1s, gap segments labelled
+  M or pᵢ, and dotted zero pads. The top panel places the strings inside H₃
+  (236); the bottom panel follows the prescribed greedy run (393).
+
 ## 4. Limitations of the study
 
 * **Size and scope.** Exact OPT exists only for n ≤ 20 here (≤ 24 is feasible).
@@ -660,6 +744,12 @@ Shibata's S_{k,t} (OPT certified, section 3b):
 * **W as a certificate.** Cases where the best greedy run reaches W are
   certified optimal without a DP. That could extend exact-OPT comparisons
   beyond n = 20 for some instances; not yet measured.
+
+* **Source of the 12/5 construction.** The report attributes it to
+  Chukhin et al. [GSC26], a "joint paper" improving Shibata's 9/4 to 12/5. We
+  have not located or verified that paper; our literature check (2026-11-05)
+  did not find it. The computational checks in section 3d test the report's
+  own definitions only.
 
 * **Larger extended study.** `configs/extended.json` (n up to 20, more reps) is
   executable but was not run. Its estimated cost is 20–25 minutes.

@@ -216,6 +216,99 @@ def main():
                 note="Rows labelled U1,j / V1,j / W1,j. Top: the three cyclic blocks are built with overlap 9, "
                      "then Vhat+Uhat with overlap s-3 = 2, then What appended with overlap 0.")
     shibata_structure(out)
+    twelve_fifths_figure(out, n=3)
+
+
+# ---------------------------------------------------------------------------
+# adapted 12/5 construction (report Section 4.4): binary gap words
+# ---------------------------------------------------------------------------
+
+def _gap_runs(s):
+    ones = [i for i, ch in enumerate(s) if ch == "1"]
+    return ones
+
+
+def _gap_label(g, N, M, n):
+    if g == M:
+        return "M"
+    if N + 2 <= g <= N + n:
+        return f"p{g - N}"
+    return str(g)
+
+
+def _draw_gap_rows(ax, title, rows, total, N, M, n, top_string=None):
+    """rows = [(label, offset, string)], drawn top to bottom."""
+    pal = {i: plt.cm.tab10(i - 2) for i in range(2, n + 1)}
+    y = len(rows) + (1.6 if top_string else 0.6)
+    if top_string is not None:
+        ones = _gap_runs(top_string)
+        ax.plot([0, len(top_string)], [y, y], color="#333333", lw=1.2)
+        ax.vlines(ones, y - 0.25, y + 0.25, color="#333333", lw=0.8)
+        ax.text(-2, y, f"superstring ({len(top_string)})", ha="right", va="center", fontsize=8)
+        y -= 1.2
+    for lab, off, s in rows:
+        ones = [off + i for i in _gap_runs(s)]
+        i_idx = int(lab[1:]) if lab[1:].isdigit() else None
+        col = pal.get(i_idx, "#555555")
+        ax.plot([off, ones[0]], [y, y], color="#bbbbbb", lw=1.0, ls=":")          # left pad
+        ax.plot([ones[-1], off + len(s)], [y, y], color="#bbbbbb", lw=1.0, ls=":")  # right pad
+        for a_, b_ in zip(ones, ones[1:]):
+            g = b_ - a_
+            is_m = g == M
+            ax.plot([a_, b_], [y, y], color="#999999" if is_m else col, lw=2.2 if not is_m else 1.4)
+            ax.text((a_ + b_) / 2, y + 0.18, _gap_label(g, N, M, n), ha="center", va="bottom",
+                    fontsize=6.5, color="#666666" if is_m else col)
+        ax.vlines(ones, y - 0.18, y + 0.18, color="#111111", lw=0.8)
+        ax.text(off - 2, y, lab, ha="right", va="center", fontsize=8, color=col)
+        y -= 1
+    ax.set_xlim(-30, total + 5)
+    ax.set_ylim(y - 0.2, len(rows) + 2.6)
+    ax.set_yticks([])
+    for sp in ("left", "right", "top"):
+        ax.spines[sp].set_visible(False)
+    ax.set_xlabel("position (characters)", fontsize=8)
+    ax.set_title(title, fontsize=9.5, loc="left")
+
+
+def twelve_fifths_figure(out, n=3):
+    from scs.twelve_fifths import build_instance, scripted_sequence, replay
+    I = build_instance(n)
+    N, M, names, H = I["N"], I["M"], I["names"], I["H"]
+    rep = replay(names, scripted_sequence(n))
+    # panel 1: inputs inside H_n (first occurrence; asserted unique)
+    rows_h = []
+    for lab, s in names.items():
+        p0 = H.find(s)
+        assert p0 >= 0 and H.find(s, p0 + 1) == -1, f"{lab} not unique in H"
+        rows_h.append((lab, p0, s))
+    rows_h.sort(key=lambda r: (r[1], r[0]))
+    # panel 2: greedy output, positions from the actual merge chain
+    order = rep["order"]
+    rows_g, p = [], 0
+    for k, lab in enumerate(order):
+        if k:
+            p += len(names[order[k - 1]]) - overlap(names[order[k - 1]], names[lab])
+        rows_g.append((lab, p, names[lab]))
+    total = max(len(H), len(rep["superstring"]))
+    fig, axes = plt.subplots(2, 1, figsize=(15, 9.5))
+    _draw_gap_rows(axes[0], f"Short superstring H_{n}: |H_{n}| = {len(H)}  "
+                   f"(each group's 5 inputs are windows of M,M,p_i,M,p_i,M,M)",
+                   rows_h, total, N, M, n, top_string=H)
+    c = I["claimed"]
+    al = "/".join(str(c["alpha"][i]) for i in range(2, n + 1))
+    be = "/".join(str(c["beta"][i]) for i in range(2, n + 1))
+    _draw_gap_rows(axes[1], f"Prescribed legal greedy run: G_{n} = {len(rep['superstring'])}.  "
+                   f"X_i+Y_i and U_i+V_i use alpha_i = {al}; B_i+Z_i uses beta_i = {be}; "
+                   f"A_i+C_i uses gamma = {c['gamma']}; the T_i blocks are joined with overlap 0",
+                   rows_g, total, N, M, n, top_string=rep["superstring"])
+    fig.suptitle(f"Adapted 12/5 construction (report Sec. 4.4), n = {n}: N = {N}, M = {M}, "
+                 f"p_i = N + i. Ticks = 1s, segments = gaps between 1s, dotted = zero pads.",
+                 fontsize=10, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    for ext in ("pdf", "png", "svg"):
+        fig.savefig(out / f"fig_twelve_fifths_n{n}.{ext}", dpi=170)
+    plt.close(fig)
+    print("wrote", out / f"fig_twelve_fifths_n{n}")
 
 
 if __name__ == "__main__":

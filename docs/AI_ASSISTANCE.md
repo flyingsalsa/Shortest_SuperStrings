@@ -25,6 +25,7 @@ one long prompt, and later asked for a pull request.
   * string-alignment figures (`analysis/alignment_figures.py`);
   * 5 timed repeats per instance in the scaling study;
   * a machine and timing protocol table in `docs/FINDINGS.md`.
+* Implemented and checked the report's adapted 12/5 construction (Section 4.4 of `Super_Strings.tex`): `scs/twelve_fifths.py`, its experiment, tests and `fig_twelve_fifths_n3`.
 * Wrote `scs/bio/`, `analysis/deep_dive.py`, `docs/dataset_manifest.md`,
   `docs/FINDINGS.md`, `docs/WALKTHROUGH.md`, the README and this log.
 

@@ -42,6 +42,7 @@ bash scripts/reproduce_bio.sh
 | `scs/runner.py`, `scs/cli.py` | experiment runner (child-process DP with timeout/memory guard, checkpoint/resume) |
 | `scs/shibata.py`, `scripts/shibata_experiment.py` | Shibata S_{k,t} reproduction: legality replay and OPT certificate |
 | `scs/two_approx.py` | OpenAI (2026) preprint's 2-approximation (forced counts, hierarchical graph, Euler tour) with run-time checks of the paper's lemmas; optional runner algorithm `two_approx` |
+| `scs/twelve_fifths.py`, `scripts/twelve_fifths_experiment.py` | report Sec. 4.4 adapted 12/5 construction: legality replay, exact OPT for n ≤ 6 |
 | `scs/bio/` | bounded download + extraction of the phiX174 sequencing data |
 | `configs/` | `smoke`, `pilot`, `standard`, `extended`, `scaling`, `bio*` configurations |
 | `analysis/analyze.py`, `analysis/deep_dive.py` | metrics, tables with bootstrap CIs, figures |

@@ -16,3 +16,4 @@ gzip -kf -9 results/standard/results.jsonl results/standard/instances.jsonl
 "$PY" -m scs.cli run configs/two_approx.json --force
 "$PY" scripts/two_approx_summary.py
 "$PY" analysis/alignment_figures.py
+"$PY" scripts/twelve_fifths_experiment.py --legal-max 20 --len-max 100 --dp-max 5
