@@ -80,9 +80,9 @@ checksums) is committed.
   strand, 1,962 match as reverse complement, 11,446 do not match exactly
   (almost all because of sequencing errors).
 * Conditions: `bio_unconditioned` (uniform from all eligible reads) and
-  `bio_local` (uniform from "+"-strand exactly placed reads starting within a
-  random 250 bp window of the circular genome; window redrawn if the pool has
-  < 40 reads). Reads are drawn until the retained (duplicate/containment-free)
+  `bio_local` (uniform from "+"-strand exactly placed reads lying entirely
+  within a random 250 bp window of the circular genome, i.e. starting in its
+  first 175 bp; window redrawn if the pool has < 40 reads). Reads are drawn until the retained (duplicate/containment-free)
   set reaches n ∈ {5, 8, 10, 12, 15, 18}; 30 subsets per (condition, n);
   seeds `derive_seed(20261105, "bio", condition, n, rep)`.
 * Duplicate/contained-read removal is the same `preprocess` used everywhere.

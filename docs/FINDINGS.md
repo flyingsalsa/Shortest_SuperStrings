@@ -46,9 +46,10 @@ input.
 
 ### 1.3 Input families (`configs/standard.json`)
 
-All 4,953 instances have n ∈ {5, 8, 10, 12, 15, 18, 20}. "Retained-size
-control" means strings are drawn until exactly n survive preprocessing; all
-draws are kept as the original input.
+There are 4,953 instances. The 4,935 benchmark instances (families A–C) have
+n ∈ {5, 8, 10, 12, 15, 18, 20}; the 18 family-D instances have 1–4 retained
+strings. "Retained-size control" means strings are drawn until exactly n
+survive preprocessing; all draws are kept as the original input.
 
 | Family | Construction | Varied parameters | Instances |
 |---|---|---|---|
@@ -63,16 +64,17 @@ Family D is reported separately and never pooled with the benchmark families.
 
 The main runs started only after the following passed. Details are in
 `docs/verification.md`.
-* All 100 pytest tests passed.
+* All 100 pytest tests passed. (The suite has since grown to 139 tests with the
+  Shibata and 2-approximation extensions; all of them pass.)
 * The DP agreed with an independent permutation brute force on 900 instances.
 * On 60 instances, the DP also agreed with direct enumeration of all candidate
   strings and with a separate BFS oracle.
 * Every greedy trace was replayed with naive overlap recomputation.
 * Half-compression was checked on 1,400 instances in the default suite and
   6,000 more in the slow test.
-* During the experiment itself, every output (69,342 synthetic rows and 4,680
-  bio rows) passed a containment check against the original inputs. No run
-  timed out or failed.
+* During the experiment itself, every output (69,342 synthetic rows and 5,040
+  bio rows, exact-DP rows included in both counts) passed a containment check
+  against the original inputs. No run timed out or failed.
 
 ### 1.5 Metrics (`docs/metrics.md`)
 
@@ -102,11 +104,15 @@ Results for `lowest_id` (`results/standard/analysis/summary_by_family_n.md`,
   repetitive at n = 20, where it is 1.008.
 * **[Observed]** The 95th percentile of G/OPT stays at or below about 1.10 in
   every cell.
-* **[Observed]** The optimality rate falls steadily as n grows, while the mean
-  ratio barely moves. For `lowest_id`, from n = 5 to n = 20:
+* **[Observed]** The optimality rate falls as n grows, while the mean ratio
+  barely moves. For `lowest_id`, from n = 5 to n = 20:
   * random: 0.88 → 0.61
   * fragments: 0.92 → 0.63
   * repetitive: 0.84 → 0.49
+
+  The decline is not strictly monotone (random rises from 0.71 at n = 10 to
+  0.76 at n = 12, within the confidence intervals), but the n = 5 and n = 20
+  bootstrap intervals do not overlap in any family.
 
   The mean absolute gap G − OPT grows from about 0.1–0.3 to about 0.7–1.3
   characters.
@@ -117,6 +123,12 @@ Results for `lowest_id` (`results/standard/analysis/summary_by_family_n.md`,
   * The Blum-style family reaches G/OPT = (4k+2)/(2k+4), which is 1.625 at
     k = 6, under all four policies.
   * The discovered instances reach 1.571 under some deterministic policies.
+    Four of the seven are exactly the three-string family {AB^h, B^(h+1), B^hA}
+    with h = 3 or 4 (up to swapping A and B), the tightness example for the
+    half-compression bound; the other three are small variations of it.
+  * The random search is not exhaustive: {ABBBBB, BBBBBB, BBBBBA} (the same
+    family with h = 5) lies in its search space and gives G/OPT = 13/8 = 1.625
+    under `lowest_id` and `lex_merged`, but was not sampled.
 * **[Proven, literature]** The worst case is far worse than anything we observed.
   Blum-style inputs push greedy towards ratio 2. Recent preprints claim worse
   examples with suitable tie-breaking: ≥ 2 for every fixed string length k ≥ 6
@@ -144,11 +156,13 @@ Tables are in deep_dive sections 1–2. Figure: `fig_ratio_vs_overlap_density`.
   | Motif length | Mutation rate | Optimality rate | Mean G/OPT | Max G/OPT |
   |---|---|---|---|---|
   | 6 | 0.05 | 0.451 | 1.044 | 1.435 |
-  | 24 | 0.25 | 0.806 | 1.004 | — |
+  | 24 | 0.25 | 0.806 | 1.004 | 1.049 |
 
   Short motifs with few mutations, which give the strongest repetition, are the
-  worst setting. At every motif length, a lower mutation rate gives a lower
-  optimality rate.
+  worst setting. At motif lengths 6 and 12, a lower mutation rate gives a lower
+  optimality rate (0.451, 0.549, 0.686 and 0.549, 0.623, 0.726 for mutation
+  rates 0.05, 0.10, 0.25). At motif length 24 the trend is not monotone
+  (0.731, 0.709, 0.806); the first two cells are within noise of each other.
 * Fragments: longer fragments over a 4-letter alphabet at coverage 2 are almost
   always optimal (0.983). The worst cells are binary-alphabet with short
   fragments.
@@ -219,6 +233,9 @@ Sources: deep_dive section 3, `tie_sensitivity.md`, `fig_tie_best_worst`,
   suboptimal but some other tie choice reaches OPT.
 * **[Observed] No deterministic rule wins overall.** Optimality rates of the
   three rules are within each other's bootstrap CIs in almost every cell.
+  Pooled over the benchmark they are 0.698 (`lowest_id`), 0.691 (`highest_id`)
+  and 0.698 (`lex_merged`), and the paired bootstrap interval of every pairwise
+  difference contains 0.
 * **[Observed] The bad family D cases are tie-driven.** All seven discovered
   instances are ones where one rule reaches OPT and another produces
   G/OPT ≈ 1.43–1.57. For example, on ABBBB, BBBBA, BBBBB:
@@ -252,16 +269,19 @@ Sources: deep_dive section 3, `tie_sensitivity.md`, `fig_tie_best_worst`,
 
   * 68% of benchmark runs have ratio exactly 1, meaning greedy was optimal.
 * **[Observed] The bound is attained exactly in two kinds of case:**
-  * Discovered three-string instances, e.g. L = 15, OPT = 7, G = 11, so
-    L − G = 4 = (L − OPT)/2.
-  * A random-family instance where L − OPT = 2 and one random-tie run lost one
-    character of overlap (deep_dive section 6). The ratio is coarse when
-    L − OPT is small.
+  * Six of the seven discovered instances (three strings each), e.g. L = 15,
+    OPT = 7, G = 11, so L − G = 4 = (L − OPT)/2.
+  * Two random-family instances with tiny optimal compression: one with
+    L − OPT = 2, where one random-tie run lost one character of overlap
+    (deep_dive section 6), and `random-61e4d68e-r0` with L − OPT = 4, where two
+    random-tie runs lost two characters. The ratio is coarse when L − OPT is
+    small.
 
   So the 1/2 constant cannot be improved even on tiny inputs. **[Proven]** by
   these explicit examples, which we verified exactly.
-* **[Observed]** Away from such small-compression instances, typical greedy
-  compression is ≥ 0.9 of optimal.
+* **[Observed]** Typical greedy compression is far above the bound: the median
+  compression ratio is 1.0 and the 1st percentile is 0.85–0.90 in every
+  benchmark family.
 * Finite tests do not prove the theorem. A violation would have meant a bug or
   an assumption failure; we found none.
 
@@ -275,11 +295,11 @@ solve time only, excluding preprocessing, the overlap matrix and process start.
 |---|---|---|---|
 | 10 | 0.8 ms | 3.3 ms | 22 µs |
 | 15 | 8.6 ms | 0.22 s | 55 µs |
-| 18 | 0.11 s | 2.5 s | 81 µs |
-| 20 | 0.66 s (160 MB) | 11.6 s (354 MB) | 0.1 ms |
-| 22 | 3.4 s (0.58 GB) | not run (capped at n = 20) | — |
+| 18 | 0.11 s | 2.4 s | 81 µs |
+| 20 | 0.66 s (160 MB) | 11.8 s (354 MB) | 0.1 ms |
+| 22 | 3.4 s (0.58 GB) | not run (capped at n = 20) | 0.14 ms |
 | 24 | 15 s (2.4 GB peak RSS) | — | 0.17 ms |
-| 25 | refused: memory estimate 5.6 GB > 4 GB budget | — | — |
+| 25 | refused: memory estimate 5.6 GB > 4 GB budget | — | 0.19 ms |
 
 The greedy times are the minimum of 5 repeats.
 
@@ -301,8 +321,9 @@ Provenance and choices are in `docs/dataset_manifest.md` and
   * **unconditioned:** reads drawn at random from all eligible reads, including
     those with errors;
   * **local-region:** reads that match the "+" strand of the reference exactly
-    and start inside a random 250 bp window. This is reference-assisted and
-    deliberately enriched for overlapping reads.
+    and lie entirely inside a random 250 bp window (each read starts in the
+    window's first 175 bp). This is reference-assisted and deliberately
+    enriched for overlapping reads.
 
 Results for `lowest_id` (deep_dive section 5):
 
@@ -317,9 +338,10 @@ Results for `lowest_id` (deep_dive section 5):
   chance.
 * Even so, tie-breaking mattered: the 13 runs disagreed on G for 46% of
   unconditioned instances.
-* In the local condition, overlaps are long (mean overlap about 16, maximum up
-  to about 68) and ties are rarer. Greedy was optimal in all 180 subsets under
-  every policy and seed.
+* In the local condition, overlaps are long (the median over subsets of the
+  mean pairwise overlap is about 16 characters; the maximum is 75, two reads
+  offset by one base) and ties are rarer. Greedy was optimal in all 180 subsets
+  under every policy and seed.
 
 **[Explanation?]**
 * Exact, error-free reads from a short non-repetitive window form a simple path
@@ -430,6 +452,10 @@ which are covered by tests (`tests/test_shibata.py`).
   * 50 random-tie runs give 245–322.
   * At t = 1, some random seeds even reach OPT.
 
+  Our rules were run only for n ≤ 200 (`POLICY_MAX_N` in
+  `scripts/shibata_experiment.py`), and their ratios grow with t: for k = 10,
+  `lex_merged` goes from 1.39 at t = 1 to 1.87 at t = 9.
+
   The 9/4 lower bound is a statement about the worst legal tie-breaking, not
   about typical greedy runs. This matches what we saw in RQ3.
 * **Compression vs length ratio.** Even at G/OPT > 2, the compression ratio
@@ -520,8 +546,8 @@ Shibata's S_{k,t} (OPT certified, section 3b):
     to 1.22 at n = 20, perhaps because pieces share more of their cost on
     larger inputs.
 * **[Observed] Its advantage shows up only on adversarial inputs.**
-  * On the Blum-style family, greedy is forced to about 2·OPT, but the
-    2-approximation stays at OPT + 2.
+  * On the Blum-style family with k ≥ 2, greedy is forced towards 2·OPT, but
+    the 2-approximation stays at OPT + 2 (at k = 1 both are optimal).
   * On S_{k,t} it beats the paper's scripted greedy run and stays under 2·OPT
     where that run exceeds it (k = 10, t = 9: 1.870 vs 2.005). Its ratio still
     rises toward 2 as t grows, because W = n there is well below OPT.
@@ -540,8 +566,9 @@ Shibata's S_{k,t} (OPT certified, section 3b):
 * **Instance families.** These are our own design choices; other generators
   could behave differently.
 * **Sampling of inputs.** Retained-size control makes the raw input count
-  random, and binary short-string cells keep many more draws than they retain
-  (up to about 26 draws per retained string). The mix of contained and
+  random, and some cells keep many more draws than they retain: up to about 26
+  draws per retained string in binary short-fragment cells and about 31 in
+  short-motif repetitive cells. The mix of contained and
   duplicate strings therefore differs between cells.
 * **Tie-breaking.** 13 runs sample the space of tie choices; they do not bound
   it. The deterministic rules depend on our ID convention (lexicographic
