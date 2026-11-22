@@ -96,15 +96,31 @@ def subconfig_key(d):
     return f
 
 
+_RNG = np.random.default_rng(20261105)
+BOOT = 2000
+
+
+def ci(values):
+    """'mean [lo, hi]': 95% percentile bootstrap CI of the mean, resampling instances."""
+    a = np.asarray(values, dtype=float)
+    if a.size < 5:
+        return f"{a.mean():.3f}"
+    means = a[_RNG.integers(0, a.size, size=(BOOT, a.size))].mean(axis=1)
+    lo, hi = np.percentile(means, [2.5, 97.5])
+    return f"{a.mean():.3f} [{lo:.3f}, {hi:.3f}]"
+
+
 def summarize(group, pol="lowest_id"):
+    """N, opt_rate with CI, median ratio, mean ratio with CI, max ratio."""
     ratios = [d[pol] / d["OPT"] for d in group]
-    opt = [d[pol] == d["OPT"] for d in group]
-    return len(group), float(np.mean(opt)), float(np.median(ratios)), float(np.mean(ratios)), float(max(ratios))
+    opt = [float(d[pol] == d["OPT"]) for d in group]
+    return len(group), ci(opt), float(np.median(ratios)), ci(ratios), float(max(ratios))
 
 
 def section_subconfig(inst, out):
     lines = ["## 1. Breakdown by generator sub-configuration (policy lowest_id, all n pooled)\n",
-             "Pooled over n = 5..20 (benchmark) or 5..18 (bio); N = instances. "
+             "Pooled over n = 5..20 (benchmark) or 5..18 (bio); N = instances. Brackets: 95% "
+             "percentile bootstrap CI of the mean, resampling instances (2000 resamples). "
              "Larger n lowers optimality rates, so compare rows within a family only "
              "(each sub-configuration has the same n mix).\n"]
     for fam in ("random", "fragments", "repetitive", "bio_unconditioned", "bio_local"):
@@ -122,7 +138,7 @@ def section_subconfig(inst, out):
             red = st.mean(1 - d["n"] / d["n_raw"] for d in g)
             rows.append([k, N, rate, mean, mx, fpos, red])
         lines.append(f"### {fam}\n")
-        lines.append(md_table(["sub-config", "N", "opt_rate", "mean G/OPT", "max G/OPT",
+        lines.append(md_table(["sub-config", "N", "opt_rate [95% CI]", "mean G/OPT [95% CI]", "max G/OPT",
                                "median frac pairs ov>0", "mean preprocessing reduction"], rows))
         lines.append("")
     out.append("\n".join(lines))
@@ -192,15 +208,16 @@ def section_ties(inst, out, figdir):
     lines = ["## 3. Tie-breaking effect\n",
              "`best` = min G over the 3 deterministic policies and all random seeds; "
              "`worst` = max over the same runs (a lower bound on the worst tie-breaking). "
-             "All on identical instances.\n"]
+             "All on identical instances. Brackets: 95% bootstrap CI over instances "
+             "(the 13 runs of one instance are not treated as independent samples).\n"]
     rows = []
     for fam in ("random", "fragments", "repetitive", "bio_unconditioned", "bio_local"):
         for n in sorted({d["n"] for d in inst.values() if d["family"] == fam}):
             g = [d for d in inst.values() if d["family"] == fam and d["n"] == n]
             allG = lambda d: [d[p] for p in DET if p in d] + d["random"]
-            best = np.mean([min(allG(d)) == d["OPT"] for d in g])
-            worst = np.mean([max(allG(d)) == d["OPT"] for d in g])
-            low = np.mean([d["lowest_id"] == d["OPT"] for d in g])
+            best = ci([float(min(allG(d)) == d["OPT"]) for d in g])
+            worst = ci([float(max(allG(d)) == d["OPT"]) for d in g])
+            low = ci([float(d["lowest_id"] == d["OPT"]) for d in g])
             rescue = np.mean([d["lowest_id"] > d["OPT"] and min(allG(d)) == d["OPT"] for d in g])
             wr = max(max(allG(d)) / d["OPT"] for d in g)
             rows.append([fam, n, len(g), low, best, worst, rescue, wr])
@@ -270,7 +287,7 @@ def section_bio(inst, out):
                          st.median(d["mean_overlap"] for d in g),
                          st.mean(1 - d["n"] / d["n_raw"] for d in g),
                          st.mean(d["tie_steps"] / (d["n"] - 1) for d in g)])
-    lines.append(md_table(["n", "family", "N", "opt_rate", "mean G/OPT", "max G/OPT",
+    lines.append(md_table(["n", "family", "N", "opt_rate [95% CI]", "mean G/OPT [95% CI]", "max G/OPT",
                            "median frac pairs ov>0", "median mean ov", "mean prepro reduction",
                            "mean tie_frac"], rows))
     lines.append("")

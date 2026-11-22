@@ -44,7 +44,8 @@ bash scripts/reproduce_bio.sh
 | `scs/two_approx.py` | OpenAI (2026) preprint's 2-approximation (forced counts, hierarchical graph, Euler tour) with run-time checks of the paper's lemmas; optional runner algorithm `two_approx` |
 | `scs/bio/` | bounded download + extraction of the phiX174 sequencing data |
 | `configs/` | `smoke`, `pilot`, `standard`, `extended`, `scaling`, `bio*` configurations |
-| `analysis/analyze.py` | metrics, tables, figures |
+| `analysis/analyze.py`, `analysis/deep_dive.py` | metrics, tables with bootstrap CIs, figures |
+| `analysis/alignment_figures.py` | string-overlap alignment figures (greedy vs optimum, Shibata construction) → `results/figures/` |
 | `results/` | raw results (JSONL, gzipped where large), manifests, traces, analysis outputs |
 | `tests/` | pytest suite (`python -m pytest -q`) |
 | `docs/` | interfaces, algorithms, verification, literature, metrics, dataset manifest, findings, walkthrough, AI-assistance log |

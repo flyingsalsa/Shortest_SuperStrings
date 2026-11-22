@@ -85,7 +85,37 @@ The main runs started only after the following passed. Details are in
 * **Aggregation:** random-tie runs are repeated measurements of one instance, so
   each instance contributes one value before any statistic across instances.
   For `random`, that value is the mean G over the seeds.
-* **Confidence intervals:** 95% bootstrap intervals that resample instances.
+* **Confidence intervals:** every per-cell mean (G/OPT, gap) and every
+  optimality rate has a 95% percentile bootstrap interval. The bootstrap uses
+  2,000 resamples and resamples instances, not tie runs. The tables also give
+  the across-instance standard deviation, quartiles, 90th and 95th
+  percentiles, and the maximum. This holds for:
+  * `summary_by_family_n.md`, for the standard and bio runs;
+  * the sub-configuration, tie-breaking and bio-comparison tables in
+    `results/deep_dive/deep_dive.md`.
+
+  Cell sizes are:
+  * 180–300 instances per family and n;
+  * 175–210 per generator sub-setting, pooled over n;
+  * 25–30 per sub-setting at a single n;
+  * 30 per bio condition and n.
+
+### 1.6 Machine and timing protocol
+
+| Item | Value |
+|---|---|
+| CPU | AMD Ryzen 9 9950X3D, 16 cores / 32 threads |
+| RAM | 31.1 GiB (33,375,485,952 bytes) |
+| OS | Windows 11 Pro, build 10.0.26200 |
+| Python / packages | CPython 3.14.7 (64-bit, MSVC build); numpy 2.5.4, matplotlib 3.11.2, psutil 7.2.2 |
+| Recorded in | every `results/*/manifest.json` (`sysinfo`), plus git commit and run start/end times |
+| Parallelism | one worker process; no other experiments or agents ran during timed runs |
+| Clock | `time.perf_counter` |
+| Timing boundaries | `t_preprocess_s`, `t_overlap_s` and `t_solve_s` are measured separately. The DP solve time is measured inside the child process and excludes process start-up and data transfer, which are recorded separately as `t_wall_child_s`. Trace recording is never timed. |
+| Repeats, scaling study | 5 instances per n × 5 timed repeats per instance, for both DP engines and for greedy. The reported value per instance is the median of its repeats. Minimum, maximum and coefficient of variation are in `scaling_runtime.md`, and every raw repeat is in `scaling.jsonl` (`t_solve_all_s`). |
+| Repeats, standard/bio runs | one timing per run. These runs measure solution quality, so their timings are descriptive only. |
+| Memory guard | DP memory is estimated before each run, and runs above the 4,000 MB budget are refused. Child peak RSS is polled with psutil, and the child is killed if it exceeds the budget. |
+| Not controlled | CPU frequency scaling and turbo, OS background activity, and the Windows timer. Absolute times are machine-specific; only scaling trends should be compared. |
 
 ## 2. Results by research question
 
@@ -181,7 +211,14 @@ Their medians are close. The clearest gaps are:
 
 These are associations, not causes.
 
-**[Observed] The case studies show one recurring mechanism.**
+**[Observed] The case studies show one recurring mechanism.** The alignment
+figures in `results/figures/` show it directly. Each draws the inputs at their
+positions in greedy's output and in the optimum, with overlaps shaded and lost
+overlaps marked in red:
+* `fig_align_bab`
+* `fig_align_blum_k3`
+* `fig_align_discovered`
+* `fig_align_repetitive_worst`
 
 * Greedy makes a maximum-overlap merge that joins two strings each of which
   had good partners elsewhere.
@@ -288,27 +325,48 @@ Sources: deep_dive section 3, `tie_sensitivity.md`, `fig_tie_best_worst`,
 ### RQ5: When does the exact DP become impractical?
 
 Source: `results/scaling/analysis/scaling_runtime.md`, `fig_scaling_runtime`.
-Each point is the median of 5 instances (alphabet 4, lengths 5–12). Times are
-solve time only, excluding preprocessing, the overlap matrix and process start.
+Setup: 5 random instances per n (alphabet 4, lengths 5–12), and **each
+instance timed 5 times**. The protocol is in section 1.6.
 
-| n | numpy DP | pure-Python DP | Greedy |
+How each cell is computed:
+1. For each instance, take the median of its 5 repeats.
+2. Report the median of those 5 per-instance values.
+
+The range in brackets is the minimum and maximum per-instance value. Memory
+is the peak RSS of the DP child process.
+
+| n | numpy DP | pure-Python DP | Greedy (`lowest_id`) |
 |---|---|---|---|
-| 10 | 0.8 ms | 3.3 ms | 22 µs |
-| 15 | 8.6 ms | 0.22 s | 55 µs |
-| 18 | 0.11 s | 2.4 s | 81 µs |
-| 20 | 0.66 s (160 MB) | 11.8 s (354 MB) | 0.1 ms |
-| 22 | 3.4 s (0.58 GB) | not run (capped at n = 20) | 0.14 ms |
-| 24 | 15 s (2.4 GB peak RSS) | — | 0.17 ms |
-| 25 | refused: memory estimate 5.6 GB > 4 GB budget | — | 0.19 ms |
+| 10 | 0.81 ms [0.79–0.83] | 3.4 ms [3.35–3.37] | 23 µs |
+| 15 | 9.1 ms [8.9–11.8] | 0.21 s [0.21–0.24] | 57 µs |
+| 18 | 0.14 s [0.11–0.16] | 2.7 s [2.4–2.9] | 99 µs |
+| 20 | 0.68 s [0.67–0.79], 162 MB | 11.5 s [11.3–12.9], 355 MB | 0.11 ms |
+| 22 | 3.38 s [3.36–3.40], 0.58 GB | not run (capped at n = 20) | 0.14 ms |
+| 24 | 15.4 s [15.4–15.5], 2.39 GB | — | 0.17 ms |
+| 25 | refused: memory estimate 5.6 GB > 4 GB budget | — | 0.20 ms |
 
-The greedy times are the minimum of 5 repeats.
+**Measurement noise is small.** The median coefficient of variation across the
+5 repeats of one instance is:
+
+| Run | Coefficient of variation |
+|---|---|
+| numpy, n ≥ 20 | ≤ 2.1% |
+| pure Python, n ≥ 15 | ≤ 4% |
+| greedy, n = 25 | 1.7% |
+| greedy, n = 10 | 24% |
+
+At the microsecond scale, timer resolution and interpreter jitter dominate,
+which explains the 24% for greedy at n = 10. Differences between instances are
+larger than the measurement noise.
 
 * **[Observed]** Time roughly doubles or more for each added string, matching
   O(n² 2ⁿ). Memory, O(n 2ⁿ), is the binding constraint first. Under our 4 GB
   budget, the limit is n ≈ 24 for the vectorised engine and around n ≈ 20 for
   readable pure Python, where one run takes about 12 s.
-* In the standard experiment, the DP solve time at n = 20 had median 0.70 s and
-  maximum 1.23 s.
+* In the standard experiment, each DP solve was timed once. At n = 20 the solve
+  time had median 0.70 s and maximum 1.23 s. Those single timings are used
+  only for the runtime-by-n table; all quality metrics are independent of
+  timing.
 
 ## 3. Real sequencing data (phiX174, ERR098007)
 
@@ -399,6 +457,12 @@ k = 10, t = 1.
   * V̂_i ⊙ Û_i, with overlap s − 3, where s = k/2;
   * M_1 ⊙ … ⊙ M_t, with overlap 1;
   * the Ŵ_i blocks appended with overlap 0.
+
+Figures:
+* `results/figures/fig_shibata_structure` draws the base strings U₁, V₁, W₁
+  and all 22 cyclic windows for k = 10, t = 1.
+* `results/figures/fig_align_shibata_k10_t1` aligns the scripted greedy run
+  (G = 47) against the certified optimum (OPT = 31).
 
 ### What we checked
 
@@ -574,8 +638,8 @@ Shibata's S_{k,t} (OPT certified, section 3b):
   it. The deterministic rules depend on our ID convention (lexicographic
   order of retained strings).
 * **Timing.** Timings come from one Windows machine under Python, and only
-  their relative scaling is meaningful. Greedy times are the best of 5 repeats;
-  DP times come from a single run each.
+  their relative scaling is meaningful. The scaling study uses 5 repeats per
+  instance; the standard and bio runs are timed once per run (section 1.6).
 * **Literature.** For several older sources and all 2026 preprints, only the
   abstract or bibliographic record was checked. Unresolved items are listed in
   `docs/literature.md`, section 3.

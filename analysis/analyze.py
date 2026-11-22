@@ -86,7 +86,8 @@ def dist(vals):
 
 
 def boot_ci(flags, rng):
-    """95% percentile bootstrap CI of the mean of 0/1 flags, resampling INSTANCES."""
+    """95% percentile bootstrap CI of the mean of per-instance values (0/1 flags or
+    continuous ratios/gaps), resampling INSTANCES."""
     a = np.asarray(flags, dtype=float)
     if a.size < 5:
         return NAN, NAN
@@ -217,7 +218,8 @@ def summary_tables(records, outdir, policies):
     special = [r for r in records if r["label"] in SPECIAL_LABELS]
 
     header = ["policy", "family", "n", "N", "ratio_mean", "ratio_median", "ratio_q1", "ratio_q3",
-              "ratio_p90", "ratio_p95", "ratio_max", "gap_mean", "gap_max", "opt_rate",
+              "ratio_p90", "ratio_p95", "ratio_max", "ratio_sd", "ratio_mean_ci_lo", "ratio_mean_ci_hi",
+              "gap_mean", "gap_sd", "gap_mean_ci_lo", "gap_mean_ci_hi", "gap_max", "opt_rate",
               "opt_ci_lo", "opt_ci_hi", "comp_N", "comp_median", "comp_min", "n_no_compression"]
     rows = []
     viol = []
@@ -235,10 +237,16 @@ def summary_tables(records, outdir, policies):
                 gaps = [m["gap"] for m in ms]
                 flags = [m["opt_frac"] for m in ms]   # per-instance optimal fraction
                 lo, hi = boot_ci(flags, rng)
+                ratios = [m["ratio"] for m in ms]
+                rlo, rhi = boot_ci(ratios, rng)
+                glo, ghi = boot_ci(gaps, rng)
+                rsd = float(np.std(ratios, ddof=1)) if len(ratios) > 1 else NAN
+                gsd = float(np.std(gaps, ddof=1)) if len(gaps) > 1 else NAN
                 comps = [m["comp"] for m in ms if "comp" in m and is_num(m["comp"])]
                 rows.append([pol, fam if group_name == "benchmark" else f"{fam} (bio)", n, d["N"],
                              d["mean"], d["median"], d["q1"], d["q3"], d["p90"], d["p95"], d["max"],
-                             float(np.mean(gaps)), max(gaps), float(np.mean(flags)), lo, hi,
+                             rsd, rlo, rhi,
+                             float(np.mean(gaps)), gsd, glo, ghi, max(gaps), float(np.mean(flags)), lo, hi,
                              len(comps), (float(np.median(comps)) if comps else NAN),
                              (min(comps) if comps else NAN),
                              sum(1 for m in ms if m.get("no_comp"))])
@@ -265,7 +273,9 @@ def summary_tables(records, outdir, policies):
     note = (banner + "Benchmark (and bio, labelled) instances only; `known`/`discovered` are in "
             "`summary_special`. Per instance one value: deterministic policy = its G; `random` = mean G "
             "over tie seeds (`opt_rate` = mean over instances of the per-instance fraction of optimal "
-            "runs). CI = 95% percentile bootstrap over instances (blank if fewer than 5 instances). "
+            "runs). All CIs (ratio mean, gap mean, opt_rate) = 95% percentile bootstrap over instances "
+            f"({BOOT_RESAMPLES} resamples; blank if fewer than 5 instances); `_sd` = sample standard "
+            "deviation across instances. "
             "`comp_*` is (L-G)/(L-OPT), only where L-OPT>0; those with L-OPT=0 are counted in "
             "`n_no_compression`.")
     write_table(outdir, "summary_by_family_n", header, rows, "Greedy vs exact by family and n", note)
@@ -370,6 +380,7 @@ def prep_table(records, outdir):
 def runtime_table(rows_in, outdir, name, title):
     by = defaultdict(list)
     cnt = defaultdict(lambda: defaultdict(int))
+    rep, cv = defaultdict(list), defaultdict(list)
     for r in rows_in:
         if r.get("algorithm") != "exact_dp" and r.get("algorithm") is not None:
             continue
@@ -380,12 +391,24 @@ def runtime_table(rows_in, outdir, name, title):
         cnt[(eng, n)][r.get("status", "?")] += 1
         if r.get("status") == "ok" and is_num(r.get("t_solve_s")):
             by[(eng, n)].append(r["t_solve_s"])
+            allt = r.get("t_solve_all_s") or []
+            if len(allt) > 1 and np.mean(allt) > 0:
+                rep[(eng, n)].append(len(allt))
+                cv[(eng, n)].append(float(np.std(allt, ddof=1) / np.mean(allt)))
     out = []
     for (eng, n) in sorted(set(by) | set(cnt), key=lambda k: (str(k[0]), k[1])):
         v = by.get((eng, n), [])
         bad = sum(c for s, c in cnt[(eng, n)].items() if s != "ok")
-        out.append([eng, n, len(v), float(np.median(v)) if v else NAN, max(v) if v else NAN, bad])
-    write_table(outdir, name, ["engine", "n", "N_ok", "t_solve_median_s", "t_solve_max_s", "N_not_ok"], out, title)
+        out.append([eng, n, len(v), float(np.median(v)) if v else NAN,
+                    float(np.min(v)) if v else NAN, max(v) if v else NAN,
+                    (int(np.median(rep[(eng, n)])) if rep[(eng, n)] else 1),
+                    (float(np.median(cv[(eng, n)])) if cv[(eng, n)] else NAN), bad])
+    write_table(outdir, name, ["engine", "n", "N_ok", "t_solve_median_s", "t_solve_min_s", "t_solve_max_s",
+                               "repeats_per_instance", "within_instance_cv_median", "N_not_ok"], out, title,
+                "Per instance, t_solve_s is the median over `repeats_per_instance` timed repeats of the same "
+                "input (1 = single timing). Across-instance median/min/max are over those per-instance values. "
+                "`within_instance_cv_median` = median coefficient of variation (sd/mean) of the repeats: "
+                "measurement noise, separate from instance-to-instance variation.")
     return out
 
 
@@ -456,17 +479,19 @@ def fig_optrate(bench, outdir, pol):
 
 def fig_runtime(rt_rows, outdir, name, title):
     pts = defaultdict(list)
-    for eng, n, nok, med, mx, bad in rt_rows:
+    for eng, n, nok, med, mn, mx, reps, cv, bad in rt_rows:
         if nok:
-            pts[eng].append((n, med, mx, nok))
+            pts[eng].append((n, med, mx, nok, mn))
     if not pts:
         return
     fig, ax = plt.subplots(figsize=(6.5, 4.2))
     for eng, v in sorted(pts.items()):
         v.sort()
         line, = ax.plot([p[0] for p in v], [p[1] for p in v], marker="o", label=f"{eng}: median")
+        ax.fill_between([p[0] for p in v], [p[4] for p in v], [p[2] for p in v],
+                        color=line.get_color(), alpha=0.15, lw=0)
         ax.plot([p[0] for p in v], [p[2] for p in v], marker="x", ls="--", color=line.get_color(),
-                label=f"{eng}: max")
+                label=f"{eng}: max (band = min-max over instances)")
     ax.set_yscale("log")
     ax.set_xlabel("retained number of strings n")
     ax.set_ylabel("solve time t_solve_s  (seconds, log scale)")

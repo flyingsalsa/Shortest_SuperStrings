@@ -14,6 +14,7 @@ import dataclasses
 import hashlib
 import itertools
 import json
+import statistics
 import multiprocessing as mp
 import os
 import sys
@@ -710,6 +711,7 @@ def run_scaling(config_path: str, resume: bool = False, force: bool = False) -> 
     mem_mb = float(cfg.get("memory_mb", 4000))
     reps = int(cfg.get("reps", 5))
     g_rep = int(cfg.get("greedy_repeats", 3))
+    dp_rep = int(cfg.get("dp_repeats", 1))
     worker = get_dp_worker()
 
     with open(path, "a", encoding="utf-8") as fout:
@@ -747,7 +749,8 @@ def run_scaling(config_path: str, resume: bool = False, force: bool = False) -> 
                         g = greedy(ret, policy="lowest_id", seed=None, trace=False, overlaps=M)
                         ts.append(time.perf_counter() - t0)
                     emit(dict(info, engine="greedy_lowest_id", status="ok", error=None,
-                              length=g.length, t_solve_s=min(ts), t_solve_all_s=ts))
+                              length=g.length, t_solve_s=statistics.median(ts),
+                              t_solve_min_s=min(ts), t_solve_all_s=ts, repeats=len(ts)))
                 for e in active:
                     if e in stopped or (n, rep, e) in done:
                         continue
@@ -758,11 +761,22 @@ def run_scaling(config_path: str, resume: bool = False, force: bool = False) -> 
                                   est_mem_bytes=est))
                         stopped[e] = n
                         continue
-                    r = worker.run(ret, M, e, timeout_s, mem_mb)
+                    runs = []
+                    for _ in range(dp_rep):          # repeated timings of the same instance
+                        r = worker.run(ret, M, e, timeout_s, mem_mb)
+                        runs.append(r)
+                        if r["status"] != "ok":
+                            break
+                    ok_t = [x["t_solve_s"] for x in runs if x["status"] == "ok"]
+                    r = runs[-1]
                     row = dict(info, engine=e, status=r["status"], error=r["error"],
-                               length=r["length"], t_solve_s=r["t_solve_s"],
+                               length=r["length"],
+                               t_solve_s=statistics.median(ok_t) if r["status"] == "ok" else None,
+                               t_solve_min_s=min(ok_t) if ok_t else None,
+                               t_solve_all_s=ok_t, repeats=len(runs),
                                t_wall_child_s=r["t_wall_child_s"],
-                               peak_rss_mb=r["peak_rss_mb"], est_mem_bytes=est)
+                               peak_rss_mb=max((x["peak_rss_mb"] or 0) for x in runs) or None,
+                               est_mem_bytes=est)
                     emit(row)
                     if r["status"] != "ok":
                         stopped[e] = n

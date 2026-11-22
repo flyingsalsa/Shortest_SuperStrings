@@ -11,6 +11,7 @@
   "engines": ["numpy", "python"],
   "python_max_n": 20,
   "greedy_repeats": 5,
+  "dp_repeats": 5,
   "timeout_s": 120,
   "memory_mb": 4000
 }

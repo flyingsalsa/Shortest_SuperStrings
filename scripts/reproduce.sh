@@ -15,3 +15,4 @@ gzip -kf -9 results/standard/results.jsonl results/standard/instances.jsonl
 "$PY" scripts/shibata_experiment.py
 "$PY" -m scs.cli run configs/two_approx.json --force
 "$PY" scripts/two_approx_summary.py
+"$PY" analysis/alignment_figures.py
