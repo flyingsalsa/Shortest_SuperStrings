@@ -119,6 +119,7 @@ def replay_scripted(instance: dict) -> dict:
     """Replay the scripted sequence; check every step is a legal greedy step."""
     k, t = instance["k"], instance["t"]
     cur = {name: st for st, name in instance["names"].items()}   # label -> string
+    members = {name: [st] for st, name in instance["names"].items()}  # label -> inputs, left to right
     ov = {}                                                     # (a,b) -> overlap, labels
 
     hist = defaultdict(int)                                     # overlap value -> count
@@ -162,11 +163,13 @@ def replay_scripted(instance: dict) -> dict:
         for lab in (left, right):
             del cur[lab]
         cur[new] = merged
+        members[new] = members.pop(left) + members.pop(right)
         add_pairs(new)
     assert len(cur) == 1
     T = next(iter(cur.values()))
+    order = next(iter(members.values()))
     missing = [st for st in instance["strings"] if st not in T]
-    return {"superstring": T, "length": len(T), "steps": steps,
+    return {"superstring": T, "length": len(T), "steps": steps, "order": order,
             "problems": problems + [f"missing {x}" for x in missing],
             "paper_length": t * (9 * (k // 2) + 1) + 1}
 

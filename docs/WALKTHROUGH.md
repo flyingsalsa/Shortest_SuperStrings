@@ -53,6 +53,13 @@ python -c "from scs.preprocess import preprocess; from scs.greedy import greedy;
 7. **`analysis/analyze.py` and `analysis/deep_dive.py`** produce the tables and
    figures.
 
+Figures to show:
+* `results/figures/fig_align_bab.png` is the example above, drawn as an
+  alignment.
+* `fig_align_blum_k3`, `fig_align_repetitive_worst` and
+  `fig_align_shibata_k10_t1` show the same failure mechanism on harder
+  inputs.
+
 ## 3. The results in five points
 
 These come from 4,953 synthetic instances with exact OPT, n from 5 to 20. The
@@ -84,6 +91,8 @@ full write-up is `docs/FINDINGS.md`.
    * The numpy engine takes 0.7 s at n = 20 and 15 s at n = 24, using 2.4 GB.
    * n = 25 exceeds our 4 GB memory budget.
    * Pure Python already takes 12 s at n = 20.
+   * Each timing is the median of 5 repeats per instance; the repeats agree
+     within a few percent.
 
 **Real reads (phiX174):**
 * When reads are sampled from one small region, greedy was optimal in every

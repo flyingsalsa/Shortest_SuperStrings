@@ -42,9 +42,11 @@ bash scripts/reproduce_bio.sh
 | `scs/runner.py`, `scs/cli.py` | experiment runner (child-process DP with timeout/memory guard, checkpoint/resume) |
 | `scs/shibata.py`, `scripts/shibata_experiment.py` | Shibata S_{k,t} reproduction: legality replay and OPT certificate |
 | `scs/two_approx.py` | OpenAI (2026) preprint's 2-approximation (forced counts, hierarchical graph, Euler tour) with run-time checks of the paper's lemmas; optional runner algorithm `two_approx` |
+| `scs/twelve_fifths.py`, `scripts/twelve_fifths_experiment.py` | report Sec. 4.4 adapted 12/5 construction: legality replay, exact OPT for n ≤ 6 |
 | `scs/bio/` | bounded download + extraction of the phiX174 sequencing data |
 | `configs/` | `smoke`, `pilot`, `standard`, `extended`, `scaling`, `bio*` configurations |
-| `analysis/analyze.py` | metrics, tables, figures |
+| `analysis/analyze.py`, `analysis/deep_dive.py` | metrics, tables with bootstrap CIs, figures |
+| `analysis/alignment_figures.py` | string-overlap alignment figures (greedy vs optimum, Shibata construction) → `results/figures/` |
 | `results/` | raw results (JSONL, gzipped where large), manifests, traces, analysis outputs |
 | `tests/` | pytest suite (`python -m pytest -q`) |
 | `docs/` | interfaces, algorithms, verification, literature, metrics, dataset manifest, findings, walkthrough, AI-assistance log |

@@ -3,8 +3,8 @@
 All numbers below come from the committed outputs:
 `results/standard/` (synthetic benchmark), `results/bio/` (phiX174 reads),
 `results/scaling/` (DP runtime), `results/deep_dive/deep_dive.md` (targeted
-analyses and case studies), `results/shibata/` and `results/two_approx/`
-(optional extensions, sections 3b and 3c). The machine was Windows 11 with an AMD CPU (32
+analyses and case studies), `results/shibata/`, `results/two_approx/` and
+`results/twelve_fifths/` (optional extensions, sections 3b–3d). The machine was Windows 11 with an AMD CPU (32
 logical cores, 31 GB RAM) running CPython 3.14.7 and numpy 2.5.4. All
 benchmarks ran single-process on an otherwise idle machine.
 
@@ -46,9 +46,10 @@ input.
 
 ### 1.3 Input families (`configs/standard.json`)
 
-All 4,953 instances have n ∈ {5, 8, 10, 12, 15, 18, 20}. "Retained-size
-control" means strings are drawn until exactly n survive preprocessing; all
-draws are kept as the original input.
+There are 4,953 instances. The 4,935 benchmark instances (families A–C) have
+n ∈ {5, 8, 10, 12, 15, 18, 20}; the 18 family-D instances have 1–4 retained
+strings. "Retained-size control" means strings are drawn until exactly n
+survive preprocessing; all draws are kept as the original input.
 
 | Family | Construction | Varied parameters | Instances |
 |---|---|---|---|
@@ -63,16 +64,17 @@ Family D is reported separately and never pooled with the benchmark families.
 
 The main runs started only after the following passed. Details are in
 `docs/verification.md`.
-* All 100 pytest tests passed.
+* All 100 pytest tests passed. (The suite has since grown to 144 tests with the
+  Shibata, 2-approximation and 12/5-construction extensions; all of them pass.)
 * The DP agreed with an independent permutation brute force on 900 instances.
 * On 60 instances, the DP also agreed with direct enumeration of all candidate
   strings and with a separate BFS oracle.
 * Every greedy trace was replayed with naive overlap recomputation.
 * Half-compression was checked on 1,400 instances in the default suite and
   6,000 more in the slow test.
-* During the experiment itself, every output (69,342 synthetic rows and 4,680
-  bio rows) passed a containment check against the original inputs. No run
-  timed out or failed.
+* During the experiment itself, every output (69,342 synthetic rows and 5,040
+  bio rows, exact-DP rows included in both counts) passed a containment check
+  against the original inputs. No run timed out or failed.
 
 ### 1.5 Metrics (`docs/metrics.md`)
 
@@ -83,7 +85,37 @@ The main runs started only after the following passed. Details are in
 * **Aggregation:** random-tie runs are repeated measurements of one instance, so
   each instance contributes one value before any statistic across instances.
   For `random`, that value is the mean G over the seeds.
-* **Confidence intervals:** 95% bootstrap intervals that resample instances.
+* **Confidence intervals:** every per-cell mean (G/OPT, gap) and every
+  optimality rate has a 95% percentile bootstrap interval. The bootstrap uses
+  2,000 resamples and resamples instances, not tie runs. The tables also give
+  the across-instance standard deviation, quartiles, 90th and 95th
+  percentiles, and the maximum. This holds for:
+  * `summary_by_family_n.md`, for the standard and bio runs;
+  * the sub-configuration, tie-breaking and bio-comparison tables in
+    `results/deep_dive/deep_dive.md`.
+
+  Cell sizes are:
+  * 180–300 instances per family and n;
+  * 175–210 per generator sub-setting, pooled over n;
+  * 25–30 per sub-setting at a single n;
+  * 30 per bio condition and n.
+
+### 1.6 Machine and timing protocol
+
+| Item | Value |
+|---|---|
+| CPU | AMD Ryzen 9 9950X3D, 16 cores / 32 threads |
+| RAM | 31.1 GiB (33,375,485,952 bytes) |
+| OS | Windows 11 Pro, build 10.0.26200 |
+| Python / packages | CPython 3.14.7 (64-bit, MSVC build); numpy 2.5.4, matplotlib 3.11.2, psutil 7.2.2 |
+| Recorded in | every `results/*/manifest.json` (`sysinfo`), plus git commit and run start/end times |
+| Parallelism | one worker process; no other experiments or agents ran during timed runs |
+| Clock | `time.perf_counter` |
+| Timing boundaries | `t_preprocess_s`, `t_overlap_s` and `t_solve_s` are measured separately. The DP solve time is measured inside the child process and excludes process start-up and data transfer, which are recorded separately as `t_wall_child_s`. Trace recording is never timed. |
+| Repeats, scaling study | 5 instances per n × 5 timed repeats per instance, for both DP engines and for greedy. The reported value per instance is the median of its repeats. Minimum, maximum and coefficient of variation are in `scaling_runtime.md`, and every raw repeat is in `scaling.jsonl` (`t_solve_all_s`). |
+| Repeats, standard/bio runs | one timing per run. These runs measure solution quality, so their timings are descriptive only. |
+| Memory guard | DP memory is estimated before each run, and runs above the 4,000 MB budget are refused. Child peak RSS is polled with psutil, and the child is killed if it exceeds the budget. |
+| Not controlled | CPU frequency scaling and turbo, OS background activity, and the Windows timer. Absolute times are machine-specific; only scaling trends should be compared. |
 
 ## 2. Results by research question
 
@@ -102,11 +134,15 @@ Results for `lowest_id` (`results/standard/analysis/summary_by_family_n.md`,
   repetitive at n = 20, where it is 1.008.
 * **[Observed]** The 95th percentile of G/OPT stays at or below about 1.10 in
   every cell.
-* **[Observed]** The optimality rate falls steadily as n grows, while the mean
-  ratio barely moves. For `lowest_id`, from n = 5 to n = 20:
+* **[Observed]** The optimality rate falls as n grows, while the mean ratio
+  barely moves. For `lowest_id`, from n = 5 to n = 20:
   * random: 0.88 → 0.61
   * fragments: 0.92 → 0.63
   * repetitive: 0.84 → 0.49
+
+  The decline is not strictly monotone (random rises from 0.71 at n = 10 to
+  0.76 at n = 12, within the confidence intervals), but the n = 5 and n = 20
+  bootstrap intervals do not overlap in any family.
 
   The mean absolute gap G − OPT grows from about 0.1–0.3 to about 0.7–1.3
   characters.
@@ -117,6 +153,12 @@ Results for `lowest_id` (`results/standard/analysis/summary_by_family_n.md`,
   * The Blum-style family reaches G/OPT = (4k+2)/(2k+4), which is 1.625 at
     k = 6, under all four policies.
   * The discovered instances reach 1.571 under some deterministic policies.
+    Four of the seven are exactly the three-string family {AB^h, B^(h+1), B^hA}
+    with h = 3 or 4 (up to swapping A and B), the tightness example for the
+    half-compression bound; the other three are small variations of it.
+  * The random search is not exhaustive: {ABBBBB, BBBBBB, BBBBBA} (the same
+    family with h = 5) lies in its search space and gives G/OPT = 13/8 = 1.625
+    under `lowest_id` and `lex_merged`, but was not sampled.
 * **[Proven, literature]** The worst case is far worse than anything we observed.
   Blum-style inputs push greedy towards ratio 2. Recent preprints claim worse
   examples with suitable tie-breaking: ≥ 2 for every fixed string length k ≥ 6
@@ -144,11 +186,13 @@ Tables are in deep_dive sections 1–2. Figure: `fig_ratio_vs_overlap_density`.
   | Motif length | Mutation rate | Optimality rate | Mean G/OPT | Max G/OPT |
   |---|---|---|---|---|
   | 6 | 0.05 | 0.451 | 1.044 | 1.435 |
-  | 24 | 0.25 | 0.806 | 1.004 | — |
+  | 24 | 0.25 | 0.806 | 1.004 | 1.049 |
 
   Short motifs with few mutations, which give the strongest repetition, are the
-  worst setting. At every motif length, a lower mutation rate gives a lower
-  optimality rate.
+  worst setting. At motif lengths 6 and 12, a lower mutation rate gives a lower
+  optimality rate (0.451, 0.549, 0.686 and 0.549, 0.623, 0.726 for mutation
+  rates 0.05, 0.10, 0.25). At motif length 24 the trend is not monotone
+  (0.731, 0.709, 0.806); the first two cells are within noise of each other.
 * Fragments: longer fragments over a 4-letter alphabet at coverage 2 are almost
   always optimal (0.983). The worst cells are binary-alphabet with short
   fragments.
@@ -167,7 +211,14 @@ Their medians are close. The clearest gaps are:
 
 These are associations, not causes.
 
-**[Observed] The case studies show one recurring mechanism.**
+**[Observed] The case studies show one recurring mechanism.** The alignment
+figures in `results/figures/` show it directly. Each draws the inputs at their
+positions in greedy's output and in the optimum, with overlaps shaded and lost
+overlaps marked in red:
+* `fig_align_bab`
+* `fig_align_blum_k3`
+* `fig_align_discovered`
+* `fig_align_repetitive_worst`
 
 * Greedy makes a maximum-overlap merge that joins two strings each of which
   had good partners elsewhere.
@@ -219,6 +270,9 @@ Sources: deep_dive section 3, `tie_sensitivity.md`, `fig_tie_best_worst`,
   suboptimal but some other tie choice reaches OPT.
 * **[Observed] No deterministic rule wins overall.** Optimality rates of the
   three rules are within each other's bootstrap CIs in almost every cell.
+  Pooled over the benchmark they are 0.698 (`lowest_id`), 0.691 (`highest_id`)
+  and 0.698 (`lex_merged`), and the paired bootstrap interval of every pairwise
+  difference contains 0.
 * **[Observed] The bad family D cases are tie-driven.** All seven discovered
   instances are ones where one rule reaches OPT and another produces
   G/OPT ≈ 1.43–1.57. For example, on ABBBB, BBBBA, BBBBB:
@@ -252,43 +306,67 @@ Sources: deep_dive section 3, `tie_sensitivity.md`, `fig_tie_best_worst`,
 
   * 68% of benchmark runs have ratio exactly 1, meaning greedy was optimal.
 * **[Observed] The bound is attained exactly in two kinds of case:**
-  * Discovered three-string instances, e.g. L = 15, OPT = 7, G = 11, so
-    L − G = 4 = (L − OPT)/2.
-  * A random-family instance where L − OPT = 2 and one random-tie run lost one
-    character of overlap (deep_dive section 6). The ratio is coarse when
-    L − OPT is small.
+  * Six of the seven discovered instances (three strings each), e.g. L = 15,
+    OPT = 7, G = 11, so L − G = 4 = (L − OPT)/2.
+  * Two random-family instances with tiny optimal compression: one with
+    L − OPT = 2, where one random-tie run lost one character of overlap
+    (deep_dive section 6), and `random-61e4d68e-r0` with L − OPT = 4, where two
+    random-tie runs lost two characters. The ratio is coarse when L − OPT is
+    small.
 
   So the 1/2 constant cannot be improved even on tiny inputs. **[Proven]** by
   these explicit examples, which we verified exactly.
-* **[Observed]** Away from such small-compression instances, typical greedy
-  compression is ≥ 0.9 of optimal.
+* **[Observed]** Typical greedy compression is far above the bound: the median
+  compression ratio is 1.0 and the 1st percentile is 0.85–0.90 in every
+  benchmark family.
 * Finite tests do not prove the theorem. A violation would have meant a bug or
   an assumption failure; we found none.
 
 ### RQ5: When does the exact DP become impractical?
 
 Source: `results/scaling/analysis/scaling_runtime.md`, `fig_scaling_runtime`.
-Each point is the median of 5 instances (alphabet 4, lengths 5–12). Times are
-solve time only, excluding preprocessing, the overlap matrix and process start.
+Setup: 5 random instances per n (alphabet 4, lengths 5–12), and **each
+instance timed 5 times**. The protocol is in section 1.6.
 
-| n | numpy DP | pure-Python DP | Greedy |
+How each cell is computed:
+1. For each instance, take the median of its 5 repeats.
+2. Report the median of those 5 per-instance values.
+
+The range in brackets is the minimum and maximum per-instance value. Memory
+is the peak RSS of the DP child process.
+
+| n | numpy DP | pure-Python DP | Greedy (`lowest_id`) |
 |---|---|---|---|
-| 10 | 0.8 ms | 3.3 ms | 22 µs |
-| 15 | 8.6 ms | 0.22 s | 55 µs |
-| 18 | 0.11 s | 2.5 s | 81 µs |
-| 20 | 0.66 s (160 MB) | 11.6 s (354 MB) | 0.1 ms |
-| 22 | 3.4 s (0.58 GB) | not run (capped at n = 20) | — |
-| 24 | 15 s (2.4 GB peak RSS) | — | 0.17 ms |
-| 25 | refused: memory estimate 5.6 GB > 4 GB budget | — | — |
+| 10 | 0.81 ms [0.79–0.83] | 3.4 ms [3.35–3.37] | 23 µs |
+| 15 | 9.1 ms [8.9–11.8] | 0.21 s [0.21–0.24] | 57 µs |
+| 18 | 0.14 s [0.11–0.16] | 2.7 s [2.4–2.9] | 99 µs |
+| 20 | 0.68 s [0.67–0.79], 162 MB | 11.5 s [11.3–12.9], 355 MB | 0.11 ms |
+| 22 | 3.38 s [3.36–3.40], 0.58 GB | not run (capped at n = 20) | 0.14 ms |
+| 24 | 15.4 s [15.4–15.5], 2.39 GB | — | 0.17 ms |
+| 25 | refused: memory estimate 5.6 GB > 4 GB budget | — | 0.20 ms |
 
-The greedy times are the minimum of 5 repeats.
+**Measurement noise is small.** The median coefficient of variation across the
+5 repeats of one instance is:
+
+| Run | Coefficient of variation |
+|---|---|
+| numpy, n ≥ 20 | ≤ 2.1% |
+| pure Python, n ≥ 15 | ≤ 4% |
+| greedy, n = 25 | 1.7% |
+| greedy, n = 10 | 24% |
+
+At the microsecond scale, timer resolution and interpreter jitter dominate,
+which explains the 24% for greedy at n = 10. Differences between instances are
+larger than the measurement noise.
 
 * **[Observed]** Time roughly doubles or more for each added string, matching
   O(n² 2ⁿ). Memory, O(n 2ⁿ), is the binding constraint first. Under our 4 GB
   budget, the limit is n ≈ 24 for the vectorised engine and around n ≈ 20 for
   readable pure Python, where one run takes about 12 s.
-* In the standard experiment, the DP solve time at n = 20 had median 0.70 s and
-  maximum 1.23 s.
+* In the standard experiment, each DP solve was timed once. At n = 20 the solve
+  time had median 0.70 s and maximum 1.23 s. Those single timings are used
+  only for the runtime-by-n table; all quality metrics are independent of
+  timing.
 
 ## 3. Real sequencing data (phiX174, ERR098007)
 
@@ -301,8 +379,9 @@ Provenance and choices are in `docs/dataset_manifest.md` and
   * **unconditioned:** reads drawn at random from all eligible reads, including
     those with errors;
   * **local-region:** reads that match the "+" strand of the reference exactly
-    and start inside a random 250 bp window. This is reference-assisted and
-    deliberately enriched for overlapping reads.
+    and lie entirely inside a random 250 bp window (each read starts in the
+    window's first 175 bp). This is reference-assisted and deliberately
+    enriched for overlapping reads.
 
 Results for `lowest_id` (deep_dive section 5):
 
@@ -317,9 +396,10 @@ Results for `lowest_id` (deep_dive section 5):
   chance.
 * Even so, tie-breaking mattered: the 13 runs disagreed on G for 46% of
   unconditioned instances.
-* In the local condition, overlaps are long (mean overlap about 16, maximum up
-  to about 68) and ties are rarer. Greedy was optimal in all 180 subsets under
-  every policy and seed.
+* In the local condition, overlaps are long (the median over subsets of the
+  mean pairwise overlap is about 16 characters; the maximum is 75, two reads
+  offset by one base) and ties are rarer. Greedy was optimal in all 180 subsets
+  under every policy and seed.
 
 **[Explanation?]**
 * Exact, error-free reads from a short non-repetitive window form a simple path
@@ -378,6 +458,12 @@ k = 10, t = 1.
   * M_1 ⊙ … ⊙ M_t, with overlap 1;
   * the Ŵ_i blocks appended with overlap 0.
 
+Figures:
+* `results/figures/fig_shibata_structure` draws the base strings U₁, V₁, W₁
+  and all 22 cyclic windows for k = 10, t = 1.
+* `results/figures/fig_align_shibata_k10_t1` aligns the scripted greedy run
+  (G = 47) against the certified optimum (OPT = 31).
+
 ### What we checked
 
 None of these checks relies on the paper's proofs.
@@ -429,6 +515,10 @@ which are covered by tests (`tests/test_shibata.py`).
     1.61–1.87;
   * 50 random-tie runs give 245–322.
   * At t = 1, some random seeds even reach OPT.
+
+  Our rules were run only for n ≤ 200 (`POLICY_MAX_N` in
+  `scripts/shibata_experiment.py`), and their ratios grow with t: for k = 10,
+  `lex_merged` goes from 1.39 at t = 1 to 1.87 at t = 9.
 
   The 9/4 lower bound is a statement about the worst legal tie-breaking, not
   about typical greedy runs. This matches what we saw in RQ3.
@@ -520,8 +610,8 @@ Shibata's S_{k,t} (OPT certified, section 3b):
     to 1.22 at n = 20, perhaps because pieces share more of their cost on
     larger inputs.
 * **[Observed] Its advantage shows up only on adversarial inputs.**
-  * On the Blum-style family, greedy is forced to about 2·OPT, but the
-    2-approximation stays at OPT + 2.
+  * On the Blum-style family with k ≥ 2, greedy is forced towards 2·OPT, but
+    the 2-approximation stays at OPT + 2 (at k = 1 both are optimal).
   * On S_{k,t} it beats the paper's scripted greedy run and stays under 2·OPT
     where that run exceeds it (k = 10, t = 9: 1.870 vs 2.005). Its ratio still
     rises toward 2 as t grows, because W = n there is well below OPT.
@@ -533,6 +623,90 @@ Shibata's S_{k,t} (OPT certified, section 3b):
   finds a superstring of length W, that superstring is certified optimal with
   no DP. On S_{k,t}, though, W = n is far below OPT = n + k − 1.
 
+## 3d. The report's adapted 12/5 construction (Section 4.4)
+
+Source: our own report, `Super_Strings.tex` Section 4.4 and Appendix A. It is
+a one-parameter simplification of a five-string construction that the report
+attributes to Chukhin et al. [GSC26].
+
+We have **not** independently verified that source; see section 5. The
+checks below test the report's own definitions:
+* implementation: `scs/twelve_fifths.py`;
+* experiment: `scripts/twelve_fifths_experiment.py`;
+* outputs: `results/twelve_fifths/`;
+* tests: `tests/test_twelve_fifths.py`.
+
+### The instance
+
+* **Strings.** For each n ≥ 2 there are 5(n−1) binary "gap words", written
+  [L | g₁,…,g_k | R] (L zeros, then 1s separated by the given gaps, then R
+  zeros). The parameters are N = n², M = N + 4n and private gaps
+  pᵢ = N + i, for i = 2..n.
+* **Superstring.** Hₙ is a short superstring: each group's five strings are
+  windows of the gap pattern (M, M, pᵢ, M, pᵢ, M, M).
+* **The bad run.** A prescribed greedy run forms, in order:
+  * Aᵢ = Xᵢ ⊕ Yᵢ and Bᵢ = Uᵢ ⊕ Vᵢ, each with overlap αᵢ;
+  * Cᵢ = Bᵢ ⊕ Zᵢ, with overlap βᵢ;
+  * Tᵢ = Aᵢ ⊕ Cᵢ, with overlap γ.
+
+  It then concatenates the Tᵢ with overlap 0.
+
+### What we checked
+
+None of these checks relies on the report's appendix arguments.
+
+1. **For every n = 2..100:**
+   * Sₙ is substring-free.
+   * Hₙ contains every input and has length 5n³ + 12n² − 2n − 1.
+   * Performing the scripted merges with their actual overlaps uses exactly
+     αᵢ = 5N+8n+i+1, βᵢ = 4N+8n+i+1, γ = 2N+2n+1 and 0.
+   * The output has length Gₙ = 12n³ + (31n² − 43n − 12)/2.
+
+   **[Observed]** All of these hold.
+2. **Legality, for n = 2..20 (up to 95 strings).** We replayed the run while
+   recomputing the overlap of every ordered pair of current strings at every
+   step: with a naive routine for n ≤ 6, and with the KMP routine (tested
+   against the naive one) above that. **[Observed]** Every prescribed pair
+   attains the current maximum. Ties are common: up to 362 pairs tie at one
+   step.
+3. **Exact OPT for n = 2..6, by subset DP.** n = 6 is 25 strings and took
+   34 s with about 5.6 GB. **[Observed]** OPT = |Hₙ| in every case, so Hₙ is
+   optimal there.
+
+### Results (excerpt from `results/twelve_fifths/twelve_fifths.md`)
+
+| n | strings | OPT | Scripted greedy Gₙ | G/OPT, or G/\|Hₙ\| where OPT is unknown | `lowest_id` | `highest_id` | `lex_merged` |
+|---|---|---|---|---|---|---|---|
+| 2 | 5 | 83 | 109 | 1.313 | 83 | 83 | 83 |
+| 3 | 10 | 236 | 393 | 1.665 | 236 | 289 | 236 |
+| 5 | 20 | 914 | 1774 | 1.941 | 914 | 1268 | 914 |
+| 6 | 25 | **1499** (exact DP) | 3015 | **2.011** | — | — | — |
+| 17 | 80 | ≤ 27,998 | 63,064 | ≥ 2.252 (> 9/4) | — | — | — |
+| 100 | 495 | ≤ 5,119,799 | 12,152,844 | ≥ 2.374 | — | — | — |
+
+Interpretation:
+* For n ≥ 7, Gₙ/|Hₙ| is a **lower bound** on G/OPT, because |Hₙ| ≥ OPT.
+* It tends to 12/5. It exceeds Shibata's 9/4 from n = 17 onwards.
+
+**[Proven] for n = 6, by exact computation.** With 25 binary strings, a legal
+greedy run has G/OPT = 3015/1499 = 2.011 > 2. That refutes "every greedy run is
+within 2·OPT" on this specific input. It is a much smaller counterexample than
+the first ratio-above-2 instance we found with Shibata's construction
+(n = 198, section 3b). It rests on our legality checker and DP, which are both
+tested.
+
+### Tie-breaking and figure
+
+* **[Observed] Ordinary tie rules avoid the trap here.** `lowest_id` and
+  `lex_merged` find the optimum for every n ≤ 5. `highest_id` is worse, up to
+  G/OPT = 1.39 at n = 5. None of 50 random-tie runs reproduced the scripted
+  output for n = 3, 4 or 5. As with Shibata's construction, the bad ratio
+  comes from one specific legal choice among many ties.
+* **Figure.** `results/figures/fig_twelve_fifths_n3` draws n = 3 (10 strings).
+  Each string is shown as a line with ticks at its 1s, gap segments labelled
+  M or pᵢ, and dotted zero pads. The top panel places the strings inside H₃
+  (236); the bottom panel follows the prescribed greedy run (393).
+
 ## 4. Limitations of the study
 
 * **Size and scope.** Exact OPT exists only for n ≤ 20 here (≤ 24 is feasible).
@@ -540,15 +714,16 @@ Shibata's S_{k,t} (OPT certified, section 3b):
 * **Instance families.** These are our own design choices; other generators
   could behave differently.
 * **Sampling of inputs.** Retained-size control makes the raw input count
-  random, and binary short-string cells keep many more draws than they retain
-  (up to about 26 draws per retained string). The mix of contained and
+  random, and some cells keep many more draws than they retain: up to about 26
+  draws per retained string in binary short-fragment cells and about 31 in
+  short-motif repetitive cells. The mix of contained and
   duplicate strings therefore differs between cells.
 * **Tie-breaking.** 13 runs sample the space of tie choices; they do not bound
   it. The deterministic rules depend on our ID convention (lexicographic
   order of retained strings).
 * **Timing.** Timings come from one Windows machine under Python, and only
-  their relative scaling is meaningful. Greedy times are the best of 5 repeats;
-  DP times come from a single run each.
+  their relative scaling is meaningful. The scaling study uses 5 repeats per
+  instance; the standard and bio runs are timed once per run (section 1.6).
 * **Literature.** For several older sources and all 2026 preprints, only the
   abstract or bibliographic record was checked. Unresolved items are listed in
   `docs/literature.md`, section 3.
@@ -569,6 +744,12 @@ Shibata's S_{k,t} (OPT certified, section 3b):
 * **W as a certificate.** Cases where the best greedy run reaches W are
   certified optimal without a DP. That could extend exact-OPT comparisons
   beyond n = 20 for some instances; not yet measured.
+
+* **Source of the 12/5 construction.** The report attributes it to
+  Chukhin et al. [GSC26], a "joint paper" improving Shibata's 9/4 to 12/5. We
+  have not located or verified that paper; our literature check (2026-11-05)
+  did not find it. The computational checks in section 3d test the report's
+  own definitions only.
 
 * **Larger extended study.** `configs/extended.json` (n up to 20, more reps) is
   executable but was not run. Its estimated cost is 20–25 minutes.
