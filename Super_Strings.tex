@@ -853,7 +853,7 @@ $s_j\notin T$, since the gain from appending $s_j$ depends only on the last
 string placed. Hence $\OPT=L-\max_iD(S,i)$, and a predecessor table recovers
 an optimal order. After an $O(n^2\ell)$ overlap matrix (Knuth--Morris--Pratt,
 $\ell$ the maximum length) this takes $O(n^22^n)$ time and $O(n2^n)$ space.
-Our pure-Python engine needs 11.8\,s at $n=20$; a numpy engine needs 0.66\,s
+Our pure-Python engine needs 11.5\,s at $n=20$; a numpy engine needs 0.68\,s
 at $n=20$ and 15\,s at $n=24$, but its estimated 5.6\,GB at $n=25$ exceeded
 our 4\,GB budget (Appendix~\ref{app:extra}). Memory is thus the binding
 constraint, and our benchmarks stop at $n=20$. Appendix~\ref{app:validation}
@@ -1577,21 +1577,22 @@ $\OPT$: it includes regions no sampled read covers, and reads with errors
 are not substrings of it.
 
 \paragraph{Runtime.} Median solve time over 5 random four-letter instances
-with lengths 5--12 per $n$, excluding preprocessing and overlaps. Greedy is
-\texttt{lowest\_id}, best of 5 repeats. Peak memory is in parentheses; the
+with lengths 5--12 per $n$, excluding preprocessing and overlaps; each
+instance was timed 5 times and contributes the median of its repeats. Greedy
+is \texttt{lowest\_id}. Peak memory is in parentheses; the
 pure-Python engine was capped at $n=20$.
 \begin{center}\small
 \begin{tabular}{rccc}
 \toprule
 $n$ & DP, numpy & DP, pure Python & Greedy\\
 \midrule
-10 & 0.76\,ms & 3.3\,ms & 22\,$\mu$s\\
-15 & 8.6\,ms & 0.22\,s & 55\,$\mu$s\\
-18 & 0.11\,s & 2.4\,s & 81\,$\mu$s\\
-20 & 0.66\,s (159\,MB) & 11.8\,s (354\,MB) & 0.11\,ms\\
+10 & 0.81\,ms & 3.4\,ms & 23\,$\mu$s\\
+15 & 9.1\,ms & 0.21\,s & 57\,$\mu$s\\
+18 & 0.14\,s & 2.7\,s & 99\,$\mu$s\\
+20 & 0.68\,s (162\,MB) & 11.5\,s (355\,MB) & 0.11\,ms\\
 22 & 3.4\,s (0.58\,GB) & -- & 0.14\,ms\\
-24 & 15.0\,s (2.4\,GB) & -- & 0.17\,ms\\
-25 & refused (estimate 5.6\,GB) & -- & 0.19\,ms\\
+24 & 15.4\,s (2.4\,GB) & -- & 0.17\,ms\\
+25 & refused (estimate 5.6\,GB) & -- & 0.20\,ms\\
 \bottomrule
 \end{tabular}
 \end{center}
